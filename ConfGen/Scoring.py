@@ -36,12 +36,38 @@ def evaluateScore(sys1, sys2, residues, score):
     Notes
     -----
     Most of this script is taken from my old "ComputeFitness" script
+
+    TODO: Add a check to see if the two systems either have the same number
+    of frames, or if either of them has 1 frame
     """
 
     # First we run some checks on the input
     if not (isinstance(sys1, md.core.trajectory.Trajectory) and
             isinstance(sys2, md.core.trajectory.Trajectory)):
         raise TypeError("At least one of the inputs isn't an mdtraj trajectory object.")
+
+    ## It's easier to work with both systems brought into one
+    ## since MDTraj's distance computing library is "1000x faster
+    ## than the native numpy implementation". To do this, both
+    ## trajectories need to have the same number of frames
+
+    if sys2.n_frames > sys1.n_frames:
+        longerSys = sys2
+        shorterSys = sys1
+    else:
+        longerSys = sys1
+        shorterSys = sys2
+
+    shorterSystemp = shorterSys
+
+    for i in range(1,longerSys.n_frames):
+        shorterSys = shorterSys.join(shorterSystemp)
+
+    print (shorterSys.n_frames)
+    fullSystem = longerSys.stack(shorterSys)
+    print (fullSystem)
+
+    sys.exit()
 
     # Generate residues matrix
     resList1 = resList2 = []
@@ -65,5 +91,11 @@ def evaluateScore(sys1, sys2, residues, score):
     for group in residues:
         # All residues cross
         if (group.ndim == 1):
+            sele = ""
+            for resname in group:
+                sele = "{} {}".format(sele,resname)
+            print (sele)
+            sys1Indices = sys1.topology.select("resname {}".format(sele))
+            print (sys1Indices)
 
     sys.exit()
