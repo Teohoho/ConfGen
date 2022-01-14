@@ -33,6 +33,7 @@ Found2FN = "../sys2_moved.dcd"
 Sys1 = ConfGen.TrajLoader.TrajectoryLoader(Sys1Top, Aligned1FN)[0]
 Sys2 = ConfGen.TrajLoader.TrajectoryLoader(Sys2Top, Found2FN)[0]
 
-ConfGen.Scoring.evaluateScore(Sys1, Sys2, [["ILE", "LEU", "VAL", "PHE", "ALA", "MET", "TYR", "TRP"],
-                                           [["ASP", "GLU"],["LYS", "ARG"]]], [1])
+ConfGen.Scoring.evaluateScore(Sys1, Sys2, [
+                                        #["ILE", "LEU", "VAL", "PHE", "ALA", "MET", "TYR", "TRP"],
+                                        [["ASP", "GLU"], ["LYS", "ARG"]]], [1])
 
