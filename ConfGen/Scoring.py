@@ -67,55 +67,115 @@ def evaluateScore(sys1, sys2, residues, score, cutoff=0.7):
         for i in range(1,sys1.n_frames):
             sys2 = sys2.join(tempSys)
 
-    #print (sys1.topology.residue(24))
-    #print (sys2.topology.residue(0))
     fullSystem = sys1.stack(sys2)
-    #print (fullSystem)
-    #print (fullSystem.topology.residue(25))
 
-    # # Generate residues matrix
-    # resList1 = resList2 = []
-    # resList = [resList1, resList2]
-    # sysList = [sys1,sys2]
-    #
-    # resIx = 0
-    # while resIx < 2:
-    #     for residue in sysList[resIx].topology.residues:
-    #         resList[resIx].append((str(residue)[:3]))
-    #     resIx += 1
+    # # Generate residues list
+    resList = []
+    for residue in fullSystem.topology.residues:
+        resList.append((str(residue)[:3]))
 
+    print (resList)
+    resList1 = resList[0:sys1.n_residues]
+    resList2 = resList[sys1.n_residues:]
+
+    
     #print (resList)
     # Compute contact score
     StartTime = datetime.datetime.now()
 
+    # First we compute the contact matrix between the two objects
+    # for all frames
+    contactMatrix = np.zeros((fullSystem.n_frames, sys1.n_residues, sys2.n_residues))
+    #print (contactMatrix.shape)
+    for i in range(0,sys1.n_residues):
+        for j in range(0,sys2.n_residues):
+            sys2ResId = j + sys1.n_residues
+            #queryAtoms = fullSystem.topology.select("resid {}".format(i))
+            #haystackAtoms = fullSystem.topology.select("resid {}".format(j))
+            contactCheck = md.compute_contacts(fullSystem, contacts=[[i,sys2ResId]]
+                                               #query_indices=queryAtoms,
+                                               #haystack_indices=haystackAtoms
+                                               )[0].flatten()
+            #print (contactCheck.shape)
+            contactMatrix[:,i,j] = contactCheck
+
+    # Afterwards we can parse this array by any residues, cutoffs and scores we wish.
 
     # Transform the lists from residues to numpy arrays
     # so they're easier to work with
     for resIx in range(len(residues)):
         residues[resIx] = np.array(residues[resIx])
 
-    # Compute indices array to see which distances we need to compute
-    ixArray = np.zeros((sys1.topology.n_atoms, sys2.topology.n_atoms))
-    print (ixArray.shape)
+    # # Compute indices array to see which distances we need to compute
+    # ixArray = np.zeros((sys1.topology.n_atoms, sys2.topology.n_atoms))
+    # print (ixArray.shape)
+    # print (sys1.topology.n_atoms)
 
+    # TODO: REALLY GOTTA DOCUMENT THIS PART CAUSE IT'S UNINTELLIGIBLE RIGHT NOW JESUS CHRIST
     for group in residues:
         # All residues cross
         if (group.ndim == 1):
             sele = ""
-            for resname in group:
-                sele = "{} {}".format(sele,resname)
-            print (sele)
-            # Generate index matrix
-            sys1Indices = fullSystem.topology.select("resid < {} and resname {}".format(sys1.topology.n_residues, sele))
-            sys2Indices = fullSystem.topology.select("resid >= {} and resname {}".format(sys2.topology.n_residues, sele))
+            for i in range(fullSystem.n_residues):
+                for resname in group:
+                    indices = fullSystem.topology.select(sele)
+                    #print (fullSystem.topology.select(sele))
+                    if (len(indices) > 0):
+                        ixList.append(indices)
+
+
+            for indicesIx in range(len(ixList)):
+                haystack = [x for i,x in enumerate(ixList) if i!=indicesIx]
+                haystacklist = []
+                for i in range(len(haystack)):
+                    e = [x for x in haystack[i] ]
+                    for j in e: #Only append if it's on the other object
+                        if (j > sys1.topology.n_atoms):
+                            haystacklist.append(j)
+
+                query = ixList[indicesIx]
+                #print (query)
+                #print (haystacklist)
+                neigbors = md.compute_neighbors(fullSystem, cutoff=cutoff,
+                                                query_indices=ixList[indicesIx],
+                                                haystack_indices=haystacklist)
+                print (neigbors)
+                sys.exit()
+
+            # Now just compute
+            sysIndices = fullSystem.topology.select("resname {}".format(sele))
+            # We split these indices by system
+            sys1Ix = []
+            sys2Ix = []
+            for i in range(len(sysIndices)):
+                if (sysIndices[i] > sys1.topology.n_atoms):
+                    sys1Ix.append(sysIndices[i] - sys1.topology.n_atoms)
+                else:
+                    sys2Ix.append(sysIndices[i])
+
+            # # Mark the relevant pairs in the ixArray
+            # for i in (sys1Ix):
+            #     for j in (sys2Ix):
+            #         ixArray[i][j] = 1
+
+            print (ixArray)
+            # Having the index matrix, we can now generate the appropriate
+            # distance pairs
+            print (sysIndices.shape)
+            sys.exit()
+
+            if sysIndices[i][j] == 1:
+                distPairs.append(i, j+sysIndices.shape[0])
+
+            print (distPairs)
 
             distPairs = []
             #for Ix1 in range(len(sys1Indices)):
             #    for Ix2 in range(Ix1,len(sys2Indices)):
             #        distPairs.append([Ix1,Ix2])
-            distPairs = np.array([c for c in itertools.product(sys1Indices, sys2Indices)])
+            #distPairs = np.array([c for c in itertools.product(sys1Indices, sys2Indices)])
 
-            dists = md.compute_distances(fullSystem, distPairs)[0]
+            #dists = md.compute_distances(fullSystem, distPairs)[0]
 
         if (group.ndim >= 2):
             sele1 = sele2 = ""
