@@ -1,6 +1,7 @@
 import mdtraj as md
 import numpy as np
-import datetime,sys, itertools
+import datetime, sys, itertools
+from operator import itemgetter
 
 def evaluateScore(sys1, sys2, residues, score, cutoff=0.7):
     """
@@ -11,19 +12,22 @@ def evaluateScore(sys1, sys2, residues, score, cutoff=0.7):
                     MDTraj trajectory to use for the system whose fitness
                     needs computing
     residues:       list of lists of str
-                    Residues to consider when computing scores. These can be
-                    simple "1D" strings, if all combinations of residues are
-                    wanted or nested ("2D") lists, if only pairs between
-                    the elements of the 2 lists are wanted.
-                    Ex: ["VAL","LEU","ILE"] means that all distances between
-                    these residues will be computed and scored.
-                    [["ASP", "GLU"]["LYS","ARG]] means that only distances between
+                    Residues to consider when computing scores. Needs to have
+                    2 "dimensions" (nested list)
+                    [["ASP", "GLU"]["LYS","ARG]] means that distances between
                     ASP/GLU and LYS/ARG will be computed and scored.
+                    [["ASP", "GLU"],["LYS","ARG],["VAL",ASP"]] means that
+                    the following contacts will be considered:
+                    ASP/LYS;ASP/ARG;ASP/VAL;ASP/ASP;
+                    GLU/LYS;GLU/ARG;GLU/VAL;GLU/ASP
+
+
+
     score:          list of ints
                     each list passed at the "residues" argument will be scored
                     by the score with the same index, from this list, so the length
                     of that argument needs to be the same as this one's
-    cutoff:         float
+    cutoff:         list of floats
                     distance threshold to consider two particles as being "in contact".
                     Given in nm.
 
@@ -49,8 +53,8 @@ def evaluateScore(sys1, sys2, residues, score, cutoff=0.7):
             isinstance(sys2, md.core.trajectory.Trajectory)):
         raise TypeError("At least one of the inputs isn't an mdtraj trajectory object.")
 
-    if (len(residues) != len(score)):
-       raise ValueError("Number of residue lists and number of scores need to be the same. "
+    if (len(residues) != len(score) != len(cutoff)):
+       raise ValueError("Number of residue lists, scores and cutoffs need to be the same. "
                         "You provided {} and {}".format(len(residues), len(score)))
 
     ## It's easier to work with both systems brought into one
@@ -69,17 +73,13 @@ def evaluateScore(sys1, sys2, residues, score, cutoff=0.7):
 
     fullSystem = sys1.stack(sys2)
 
+
+
     # # Generate residues list
     resList = []
     for residue in fullSystem.topology.residues:
         resList.append((str(residue)[:3]))
 
-    print (resList)
-    resList1 = resList[0:sys1.n_residues]
-    resList2 = resList[sys1.n_residues:]
-
-    
-    #print (resList)
     # Compute contact score
     StartTime = datetime.datetime.now()
 
@@ -99,90 +99,64 @@ def evaluateScore(sys1, sys2, residues, score, cutoff=0.7):
             #print (contactCheck.shape)
             contactMatrix[:,i,j] = contactCheck
 
-    # Afterwards we can parse this array by any residues, cutoffs and scores we wish.
+    # We also generate two lists of resnames, so we have a way to get back indices later
+    resList1 = resList[0:sys1.n_residues]
+    resList2 = resList[sys1.n_residues:]
 
-    # Transform the lists from residues to numpy arrays
-    # so they're easier to work with
-    for resIx in range(len(residues)):
-        residues[resIx] = np.array(residues[resIx])
+    currentTime = datetime.datetime.now()
+    print ("Contact Matrix succesfully computed. Took {} seconds.".format((currentTime - StartTime).total_seconds()))
 
-    # # Compute indices array to see which distances we need to compute
-    # ixArray = np.zeros((sys1.topology.n_atoms, sys2.topology.n_atoms))
-    # print (ixArray.shape)
-    # print (sys1.topology.n_atoms)
+    # Afterwards we can parse this array by any residues, cutoffs and assign any scores we wish.
 
-    # TODO: REALLY GOTTA DOCUMENT THIS PART CAUSE IT'S UNINTELLIGIBLE RIGHT NOW JESUS CHRIST
-    for group in residues:
-        # All residues cross
-        if (group.ndim == 1):
-            sele = ""
-            for i in range(fullSystem.n_residues):
-                for resname in group:
-                    indices = fullSystem.topology.select(sele)
-                    #print (fullSystem.topology.select(sele))
-                    if (len(indices) > 0):
-                        ixList.append(indices)
+    # To be able to rank the frames of a simulation we have to iterate through them
+    framesScore = np.zeros(fullSystem.n_frames)
 
+    # For each group in residues, we generate the pairs of residues whose contact we take into account
+    for GroupIx in range(len(residues)):
+        crossedRes = []
+        for resIx in range(len(residues[GroupIx])):
+            poppedRes = [x for i, x in enumerate(residues[GroupIx]) if i != resIx]
+            allPoppedResList = []
+            for i in range(len(poppedRes)):
+                for j in poppedRes[i]:
+                    allPoppedResList.append(j)
+            for IX in range(len(residues[GroupIx][resIx])):
+                for JX in range(len(allPoppedResList)):
+                    crossedRes.append([residues[GroupIx][resIx][IX], allPoppedResList[JX]])
+        # To account for the possibility of the same residue multiple times, we remove duplicate elements
+        crossedRes.sort()
+        crossedRes = list (crossedRes for crossedRes,_ in itertools.groupby(crossedRes))
+        #print (crossedRes)
 
-            for indicesIx in range(len(ixList)):
-                haystack = [x for i,x in enumerate(ixList) if i!=indicesIx]
-                haystacklist = []
-                for i in range(len(haystack)):
-                    e = [x for x in haystack[i] ]
-                    for j in e: #Only append if it's on the other object
-                        if (j > sys1.topology.n_atoms):
-                            haystacklist.append(j)
+    # For each pair of residues computed above, we get the pair of indices that correspond
+    # to that pair of aminoacids, in the contact Matrix
+        for frameIx in range(framesScore.shape[0]):
+            groupScore = 0 
+            for crossIx in crossedRes:
+                Index1 = []
+                Index2 = []
+                for i,element in enumerate(resList1):
+                    if (element == crossIx[0]):
+                        Index1.append(i)
+                for i,element in enumerate(resList2):
+                    if (element == crossIx[0]):
+                        Index2.append(i)
 
-                query = ixList[indicesIx]
-                #print (query)
-                #print (haystacklist)
-                neigbors = md.compute_neighbors(fullSystem, cutoff=cutoff,
-                                                query_indices=ixList[indicesIx],
-                                                haystack_indices=haystacklist)
-                print (neigbors)
-                sys.exit()
+                # Generate Matrix coordinate pairs:
+                for dim1 in Index1:
+                    for dim2 in Index2:
+                        if (contactMatrix[frameIx][dim1][dim2] < cutoff[GroupIx]):
+                            groupScore = groupScore + score[GroupIx]
+            framesScore[frameIx] = framesScore[frameIx] + groupScore
+    #print(framesScore)
 
-            # Now just compute
-            sysIndices = fullSystem.topology.select("resname {}".format(sele))
-            # We split these indices by system
-            sys1Ix = []
-            sys2Ix = []
-            for i in range(len(sysIndices)):
-                if (sysIndices[i] > sys1.topology.n_atoms):
-                    sys1Ix.append(sysIndices[i] - sys1.topology.n_atoms)
-                else:
-                    sys2Ix.append(sysIndices[i])
+    ## Having the frames and their respective scores, we can rank them
+    ## Generate an array
+    orderedFrames = []
+    for frameIx in range(len(framesScore)):
+        orderedFrames.append([fullSystem[frameIx],framesScore[frameIx]])
 
-            # # Mark the relevant pairs in the ixArray
-            # for i in (sys1Ix):
-            #     for j in (sys2Ix):
-            #         ixArray[i][j] = 1
+    sortedFrames = sorted(orderedFrames, key=itemgetter(1), reverse=True)
 
-            print (ixArray)
-            # Having the index matrix, we can now generate the appropriate
-            # distance pairs
-            print (sysIndices.shape)
-            sys.exit()
-
-            if sysIndices[i][j] == 1:
-                distPairs.append(i, j+sysIndices.shape[0])
-
-            print (distPairs)
-
-            distPairs = []
-            #for Ix1 in range(len(sys1Indices)):
-            #    for Ix2 in range(Ix1,len(sys2Indices)):
-            #        distPairs.append([Ix1,Ix2])
-            #distPairs = np.array([c for c in itertools.product(sys1Indices, sys2Indices)])
-
-            #dists = md.compute_distances(fullSystem, distPairs)[0]
-
-        if (group.ndim >= 2):
-            sele1 = sele2 = ""
-            seles = [sele1,sele2]
-            for groupIx in range(len(group)):
-                for resname in group[groupIx]:
-                    seles[groupIx] = "{} {}".format(seles[groupIx],resname)
-            print(seles)
-            sys1
-
+    # We then return the sortedFrames
+    return (sortedFrames)
