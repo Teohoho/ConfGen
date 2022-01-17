@@ -1,22 +1,20 @@
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 import warnings
-import mdtraj as md
-import sys
 
-def Search(pos1, pos2, outRoot, r, theta=45, phi=45, delta=0.27, ndelta=0, axis="z"):
+
+def Search(pos2, r, theta=45, phi=45, delta=0.27, ndelta=0, axis="z"):
     """
-    Function that searches the conformational space.
+    Function that searches the conformational space by translating and rotating
+    relative to the Y-axis
 
     Parameters
     ----------
 
-    pos1,pos2:  numpy.ndarray
+    pos2:  numpy.ndarray
                array, shape (N,3), of the rotated positions
                of the two systems. in nm!
 
-    outRoot:    str
-                root name for all outputted RST files
 
     r:          float
                 initial distance between the two helices,
@@ -47,40 +45,35 @@ def Search(pos1, pos2, outRoot, r, theta=45, phi=45, delta=0.27, ndelta=0, axis=
     -------
     conformations: numpy.ndarray
                 array of dimensions (M,N,3), where:
-                M is the number of conformations found, which should be equal to ()
-                #TODO: FILL THIS OUT
+                M is the number of conformations found, which should be equal to
+                (360/theta + 360/phi + ndelta + 1)
                 N is the number of particles in the system
                 3 is the integer that comes after 2, but before 4.
 
     Notes
     -----
-
     By default, we initially increment along the z axis, then translate
     along the Y axis (by delta), then we rotate in the XZ plane
     (by both theta and phi)
 
     """
 
-    conformations = np.zeros((0,pos2.shape[0],3))
-
-    #print (conformations)
-    #print (conformations.shape)
+    conformations = np.zeros((0, pos2.shape[0], 3))
 
     # Set up number of rotations
     thetaIterations = np.int(360/theta)
     phiIterations = np.int(360/phi)
 
-    #print (thetaIterations,phiIterations)
     # Display warning if theta/phi are not divisors of 360
     if (360 % theta != 0 or 360 % phi != 0):
         warnings.warn("The theta/phi values are not divisors of "
-                      "360. A full will not be achieved")
+                      "360. A full rotation will not be achieved")
 
     # Define alignment axis
     axis = axis.lower()
     if axis not in ('x', 'y', 'z'):
         raise ValueError("Axis argument must be one of ['x', 'y', 'z']")
-    axes_vectors = {"x": np.array([1, 0, 0]), "y":np.array([0, 1, 0]), "z":np.array([0, 0, 1])}
+    axes_vectors = {"x": np.array([1, 0, 0]), "y": np.array([0, 1, 0]), "z": np.array([0, 0, 1])}
     translation_axis = axes_vectors[axis]
 
     # It's easier to just compute one rotation, in case Theta = Phi
@@ -95,19 +88,14 @@ def Search(pos1, pos2, outRoot, r, theta=45, phi=45, delta=0.27, ndelta=0, axis=
     # Translate along the selected axis
         sys2 = np.array(sys2 + (translation_axis * r))
 
-    #print (startPose.shape)
-    #print ((axes_vectors["y"]*1*delta).shape)
     # Translate by delta
         for i in range(-ndelta, ndelta+1):
             sys3 = sys2
-            #print (axes_vectors["y"]*i*delta)
-            #print (i)
             sys3 = sys3 + (axes_vectors["y"]*i*delta)
-           # print (sys2[0])
 
         # Rotate by Theta
         # Define a rotation vector, which is the Y axis,
-        # with a norm equal to theta (in radians)
+        # with a norm equal to Theta (in radians)
             if (theta==phi):
                 theta_vector = phi_vector
             else:
@@ -115,13 +103,9 @@ def Search(pos1, pos2, outRoot, r, theta=45, phi=45, delta=0.27, ndelta=0, axis=
 
             if thetaIterations > 1:
                 for thetaIx in range(thetaIterations):
-             #print ("Rotating around Y axis by {}".format(thetaIx*phi))
                     sys3 = np.array(theta_vector.apply(sys3))
                     conformations = np.concatenate((conformations,np.array(sys3,ndmin=3)))
             else:
                 conformations = np.concatenate((conformations,np.array(sys3,ndmin=3)))
 
-
-    #print (conformations.shape)
     return (conformations)
-    #return conformations

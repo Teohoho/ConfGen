@@ -11,7 +11,6 @@ def TrajectoryLoader(topology, coordinates):
     #print (MDTrajObj.n_residues)
     atoms_CA = [x.index for x in MDTrajObj.topology.atoms_by_name("CA")]
     max_distance = 0
-    #print(atoms_CA)
     for i in range(MDTrajObj.n_residues):
         atoms = [x.index for x in MDTrajObj.topology.residue(i).atoms]
         distancePairs = [[atoms_CA[i],x] for x in atoms]

@@ -1,6 +1,6 @@
 import mdtraj as md
 import numpy as np
-import datetime, sys, itertools
+import datetime, itertools
 from operator import itemgetter
 
 def evaluateScore(sys1, sys2, residues, score, cutoff=0.7):
@@ -14,14 +14,11 @@ def evaluateScore(sys1, sys2, residues, score, cutoff=0.7):
     residues:       list of lists of str
                     Residues to consider when computing scores. Needs to have
                     2 "dimensions" (nested list)
-                    [["ASP", "GLU"]["LYS","ARG]] means that distances between
-                    ASP/GLU and LYS/ARG will be computed and scored.
+
                     [["ASP", "GLU"],["LYS","ARG],["VAL",ASP"]] means that
                     the following contacts will be considered:
                     ASP/LYS;ASP/ARG;ASP/VAL;ASP/ASP;
                     GLU/LYS;GLU/ARG;GLU/VAL;GLU/ASP
-
-
 
     score:          list of ints
                     each list passed at the "residues" argument will be scored
@@ -34,11 +31,10 @@ def evaluateScore(sys1, sys2, residues, score, cutoff=0.7):
 
     Returns
     -------
-    score:          tuple
-                    Tuple containing:
-                    bad charge contacts
-                    good charge contacts
-                    neighboring hydrophobics
+    score:          list of tuple
+                    List of tuples containing MDTraj Trajectory object of conformation
+                    and its associated score
+
 
     Notes
     -----
@@ -53,9 +49,9 @@ def evaluateScore(sys1, sys2, residues, score, cutoff=0.7):
             isinstance(sys2, md.core.trajectory.Trajectory)):
         raise TypeError("At least one of the inputs isn't an mdtraj trajectory object.")
 
-    if (len(residues) != len(score) != len(cutoff)):
+    if ((len(residues) != len(score)) or (len(score)!= len(cutoff))):
        raise ValueError("Number of residue lists, scores and cutoffs need to be the same. "
-                        "You provided {} and {}".format(len(residues), len(score)))
+                        "You provided {}, {} and {}".format(len(residues), len(score), len(cutoff)))
 
     ## It's easier to work with both systems brought into one
     ## since MDTraj's distance computing library is "1000x faster
@@ -75,7 +71,7 @@ def evaluateScore(sys1, sys2, residues, score, cutoff=0.7):
 
 
 
-    # # Generate residues list
+    # Generate residues list
     resList = []
     for residue in fullSystem.topology.residues:
         resList.append((str(residue)[:3]))
@@ -86,17 +82,13 @@ def evaluateScore(sys1, sys2, residues, score, cutoff=0.7):
     # First we compute the contact matrix between the two objects
     # for all frames
     contactMatrix = np.zeros((fullSystem.n_frames, sys1.n_residues, sys2.n_residues))
-    #print (contactMatrix.shape)
     for i in range(0,sys1.n_residues):
         for j in range(0,sys2.n_residues):
             sys2ResId = j + sys1.n_residues
-            #queryAtoms = fullSystem.topology.select("resid {}".format(i))
-            #haystackAtoms = fullSystem.topology.select("resid {}".format(j))
             contactCheck = md.compute_contacts(fullSystem, contacts=[[i,sys2ResId]]
                                                #query_indices=queryAtoms,
                                                #haystack_indices=haystackAtoms
                                                )[0].flatten()
-            #print (contactCheck.shape)
             contactMatrix[:,i,j] = contactCheck
 
     # We also generate two lists of resnames, so we have a way to get back indices later
@@ -105,8 +97,6 @@ def evaluateScore(sys1, sys2, residues, score, cutoff=0.7):
 
     currentTime = datetime.datetime.now()
     print ("Contact Matrix succesfully computed. Took {} seconds.".format((currentTime - StartTime).total_seconds()))
-
-    # Afterwards we can parse this array by any residues, cutoffs and assign any scores we wish.
 
     # To be able to rank the frames of a simulation we have to iterate through them
     framesScore = np.zeros(fullSystem.n_frames)
@@ -125,8 +115,7 @@ def evaluateScore(sys1, sys2, residues, score, cutoff=0.7):
                     crossedRes.append([residues[GroupIx][resIx][IX], allPoppedResList[JX]])
         # To account for the possibility of the same residue multiple times, we remove duplicate elements
         crossedRes.sort()
-        crossedRes = list (crossedRes for crossedRes,_ in itertools.groupby(crossedRes))
-        #print (crossedRes)
+        crossedRes = list(crossedRes for crossedRes,_ in itertools.groupby(crossedRes))
 
     # For each pair of residues computed above, we get the pair of indices that correspond
     # to that pair of aminoacids, in the contact Matrix
@@ -148,13 +137,11 @@ def evaluateScore(sys1, sys2, residues, score, cutoff=0.7):
                         if (contactMatrix[frameIx][dim1][dim2] < cutoff[GroupIx]):
                             groupScore = groupScore + score[GroupIx]
             framesScore[frameIx] = framesScore[frameIx] + groupScore
-    #print(framesScore)
 
     ## Having the frames and their respective scores, we can rank them
-    ## Generate an array
     orderedFrames = []
     for frameIx in range(len(framesScore)):
-        orderedFrames.append([fullSystem[frameIx],framesScore[frameIx]])
+        orderedFrames.append([fullSystem[frameIx], framesScore[frameIx]])
 
     sortedFrames = sorted(orderedFrames, key=itemgetter(1), reverse=True)
 
