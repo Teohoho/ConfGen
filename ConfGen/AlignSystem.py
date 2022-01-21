@@ -63,6 +63,7 @@ def alignToAxis(system, axis="y", CenterAxisSele=None):
 
     FirstIndices = system.topology.select(FirstSele)
     LastIndices = system.topology.select(LastSele)
+    BackboneIndices = system.topology.select("protein and backbone")
 
     FirstHelixPositions = []
     LastHelixPositions = []
@@ -89,29 +90,30 @@ def alignToAxis(system, axis="y", CenterAxisSele=None):
 
     aligned_atoms = rot_vec.apply(system.xyz[0])
 
-    FirstHelixPositions = []
-    LastHelixPositions = []
-    for i in range(len(FirstIndices)):
-        FirstHelixPositions.append(aligned_atoms[FirstIndices[i]])
-    for i in range(len(LastIndices)):
-        LastHelixPositions.append(aligned_atoms[LastIndices[i]])
+    # Compute the central point of the rotated system, using only the
+    # backbone atoms, so there isn't any bias when working with large residues
+    BackbonePositions = []
+    for i in range(len(BackboneIndices)):
+        BackbonePositions.append(aligned_atoms[i])
 
     # We align to the "axis" axis, but first recompute the central axis
-    FirstHelixPositions = np.array(FirstHelixPositions)
+    BackbonePositions = np.array(BackbonePositions)
 
-    center_axis_point1 = centroidPoints(FirstHelixPositions)
+    centerpoint = centroidPoints(BackbonePositions)
+    print (centerpoint)
 
     for AtomIx in range(aligned_atoms.shape[0]):
-        X_offset = np.array([center_axis_point1[0], 0, 0])
-        Z_offset = np.array([0, 0, center_axis_point1[2]])
-        aligned_atoms[AtomIx] = (aligned_atoms[AtomIx] - X_offset) - Z_offset
+        X_offset = abs(np.array([centerpoint[0], 0, 0]))
+        Y_offset = abs(np.array([0,centerpoint[1],0]))
+        Z_offset = abs(np.array([0, 0, centerpoint[2]]))
+    #    aligned_atoms[AtomIx] = ((aligned_atoms[AtomIx] - X_offset) - Y_offset) - Z_offset
 
     # For simplicity, we also translate the system so the
     # center of the axis is at (0,0,0)
-    center_axis_unNorm = rot_vec.apply(center_axis_unNorm)
-    for AtomIx in range(aligned_atoms.shape[0]):
-        offset_Y = np.array([0, (center_axis_unNorm[1])/2, 0])
-        aligned_atoms[AtomIx] = aligned_atoms[AtomIx] + offset_Y
+    #center_axis_unNorm = rot_vec.apply(center_axis_unNorm)
+    #for AtomIx in range(aligned_atoms.shape[0]):
+    #    offset_Y = np.array([0, (center_axis_unNorm[1])/2, 0])
+    #    aligned_atoms[AtomIx] = aligned_atoms[AtomIx] + offset_Y
 
     return (aligned_atoms)
 
