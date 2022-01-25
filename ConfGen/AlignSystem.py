@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.spatial.transform import Rotation as R
+from math import *
 
 def centroidPoints(arr):
     length = arr.shape[0]
@@ -28,17 +29,23 @@ def alignToAxis(system, axis="y", CenterAxisSele=None):
     Returns
     -------
     alignedPos: numpy ndarray
-               Array of shape (N,3) corresponding to the system aligned to
-               the Y axis
+                Array of shape (N,3) corresponding to the system aligned to
+                the Y axis
+    longAxis:   float
+                Length of long axis that makes up the ellipse that surrounds
+                the system
+    shortAxis:  float
+                Length of short axis that makes up the ellipse that surrounds
+                the system
     """
 
     #Check imput
     if (CenterAxisSele is not None):
         if not (isinstance(CenterAxisSele, list)):
-            raise ValueError("CenterAxisSele needs to be a nested list of two strings"
+            raise ValueError("CenterAxisSele needs to be a list of two strings"
                              ", not {}".format(type(CenterAxisSele)))
         if (len(CenterAxisSele) != 2):
-            raise ValueError("CenterAxisSele needs to be a nested list of two strings"
+            raise ValueError("CenterAxisSele needs to be a list of two strings"
                              ", not {}".format(len(CenterAxisSele)))
 
     # Define alignment axis
@@ -94,26 +101,59 @@ def alignToAxis(system, axis="y", CenterAxisSele=None):
     # backbone atoms, so there isn't any bias when working with large residues
     BackbonePositions = []
     for i in range(len(BackboneIndices)):
-        BackbonePositions.append(aligned_atoms[i])
+        BackbonePositions.append(aligned_atoms[BackboneIndices[i]])
 
     # We align to the "axis" axis, but first recompute the central axis
     BackbonePositions = np.array(BackbonePositions)
 
     centerpoint = centroidPoints(BackbonePositions)
-    print (centerpoint)
 
     for AtomIx in range(aligned_atoms.shape[0]):
-        X_offset = abs(np.array([centerpoint[0], 0, 0]))
-        Y_offset = abs(np.array([0,centerpoint[1],0]))
-        Z_offset = abs(np.array([0, 0, centerpoint[2]]))
-    #    aligned_atoms[AtomIx] = ((aligned_atoms[AtomIx] - X_offset) - Y_offset) - Z_offset
+        X_offset = np.array([centerpoint[0], 0, 0])
+        Y_offset = np.array([0,centerpoint[1],0])
+        Z_offset = np.array([0, 0, centerpoint[2]])
+        aligned_atoms[AtomIx] = ((aligned_atoms[AtomIx] - X_offset) - Y_offset) - Z_offset
 
-    # For simplicity, we also translate the system so the
-    # center of the axis is at (0,0,0)
-    #center_axis_unNorm = rot_vec.apply(center_axis_unNorm)
-    #for AtomIx in range(aligned_atoms.shape[0]):
-    #    offset_Y = np.array([0, (center_axis_unNorm[1])/2, 0])
-    #    aligned_atoms[AtomIx] = aligned_atoms[AtomIx] + offset_Y
 
-    return (aligned_atoms)
+    # In addition to centering the system on (0,0,0), we also rotate it so the longest side
+    # chain is oriented along the Z axis.
+    # First, we find the distance that is the farthest away from the (0,0,0), in the XZ plane
+    if (np.max(np.absolute(aligned_atoms[:,0])) > np.max(np.absolute(aligned_atoms[:,2]))):
+        #print(np.argmax(np.absolute(aligned_atoms[:, 0])))
+        farthestAtomIx = np.argmax(np.absolute(aligned_atoms[:, 0]))
+    else:
+        #print(np.argmax(np.absolute(aligned_atoms[:, 2])))
+        farthestAtomIx = np.argmax(np.absolute(aligned_atoms[:, 2]))
+
+    #print ("Farthest atom from the centerpoint, in the XZ plane, is {} (index {})".format(aligned_atoms[farthestAtomIx],
+    #                                                                    farthestAtomIx))
+
+    # Compute the angle we need to rotate by to align said atom to the Z axis.
+    farthestAtom=aligned_atoms[farthestAtomIx]
+    #print (farthestAtom)
+    farthestAtom = farthestAtom / np.linalg.norm(farthestAtom)
+    rot_ang = acos(abs(farthestAtom[2])/sqrt(pow(farthestAtom[0],2) + pow(farthestAtom[2],2)))
+
+    if (farthestAtom[2]>0):
+        signage=-1
+    else:
+        signage=+1
+
+    rot_vec = R.from_rotvec(np.array([0,1,0]) * (rot_ang * signage))
+    aligned_atoms = rot_vec.apply(aligned_atoms)
+
+    longAxis=abs(aligned_atoms[farthestAtomIx][2]*2)
+
+    # Now we can get the short axis, by getting the atom that is the
+    # farthest from the center on the x axis
+    farthestAtomIx = np.argmax(np.absolute(aligned_atoms[:, 0]))
+    #print ("Farthest point on the X axis: {} (index {})".format(
+    #    aligned_atoms[farthestAtomIx],farthestAtomIx))
+    shortAxis=abs(aligned_atoms[farthestAtomIx][0]*2)
+
+    # Long ellipsis axis:
+    #print ("Long axis: {} nm".format(longAxis))
+    #print ("Short axis: {} nm".format(shortAxis))
+
+    return (aligned_atoms, longAxis, shortAxis)
 

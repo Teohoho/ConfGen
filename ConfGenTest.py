@@ -2,40 +2,59 @@ import numpy as np
 
 import ConfGen
 import sys
-# Load the systems
-Sys1Top = "../getConformations/ZAR1_individual_helics/h2/h2l.prmtop"
-Sys1Coord = "../getConformations/ZAR1_individual_helics/h2/h2l_min.inpcrd"
-Sys2Top = "../getConformations/ZAR1_individual_helics/h3/h3s.prmtop"
-Sys2Coord = "../getConformations/ZAR1_individual_helics/h3/h3s_min.inpcrd"
+# Load the systems (monteverdi)
+#Sys1Top = "../getConformations/ZAR1_individual_helics/h2/h2l.prmtop"
+#Sys1Coord = "../getConformations/ZAR1_individual_helics/h2/h2l_min.inpcrd"
+#Sys2Top = "../getConformations/ZAR1_individual_helics/h3/h3s.prmtop"
+#Sys2Coord = "../getConformations/ZAR1_individual_helics/h3/h3s_min.inpcrd"
 
+# Load the systems (Home)
+Sys1Top =   "../ZAR1_individual_helics/h2/h2l.prmtop"
+Sys1Coord = "../ZAR1_individual_helics/h2/h2l_min.inpcrd"
+Sys2Top =   "../ZAR1_individual_helics/h3/h3s.prmtop"
+Sys2Coord = "../ZAR1_individual_helics/h3/h3s_min.inpcrd"
+
+#Sys3Coord = "output/rank0.pdb"
+
+
+#Sys3 = ConfGen.TrajLoader.TrajectoryLoader(Sys3Coord, Sys3Coord)
 Sys1 = ConfGen.TrajLoader.TrajectoryLoader(Sys1Top, Sys1Coord)
 Sys2 = ConfGen.TrajLoader.TrajectoryLoader(Sys2Top, Sys2Coord)
 
-outputFN = "../output/"
+outputFN = "./output/"
 
 # Align the systems to the Y axis
-alignedPos1 = ConfGen.AlignSystem.alignToAxis(Sys1[0], axis="y")
-alignedPos2 = ConfGen.AlignSystem.alignToAxis(Sys2[0], axis="y")
+alignedPos1 = ConfGen.AlignSystem.alignToAxis(Sys1, axis="y")
+alignedPos2 = ConfGen.AlignSystem.alignToAxis(Sys2, axis="y")
+#alignedPos3 = ConfGen.AlignSystem.alignToAxis(Sys3, axis="y",
+#                            CenterAxisSele=["resid 0 to 3","resid 21 to 24"])
 
 # Save the aligned systems and visualize them in VMD, to check
 # that everything went smoothly
 Aligned1FN = outputFN + "Sys1.rst7"
 Aligned2FN = outputFN + "Sys2.rst7"
+#Aligned3FN = outputFN + "Sys3.rst7"
 
-print (Aligned1FN.split(".")[-1])
+#print (Aligned1FN.split(".")[-1])
 
-ConfGen.TrajWriter.writeTraj(alignedPos1, out_FN=Aligned1FN)
-ConfGen.TrajWriter.writeTraj(alignedPos2, out_FN=Aligned2FN)
+ConfGen.TrajWriter.writeTraj(alignedPos1[0], out_FN=Aligned1FN)
+ConfGen.TrajWriter.writeTraj(alignedPos2[0], out_FN=Aligned2FN)
+#ConfGen.TrajWriter.writeTraj(alignedPos3, out_FN=Aligned3FN)
 
 # Set minimum distance between helices
-distMin = Sys1[1] + Sys2[1] + 0.1
+longAx =  alignedPos1[1] + 0.1
+shortAx = alignedPos1[2] + 0.1
+
+print(longAx, shortAx)
 
 # Search
-conformations = ConfGen.Search.Search(alignedPos2, distMin, ndelta=7)
+conformations = ConfGen.Search.Search(alignedPos2[0], (longAx,shortAx), ndelta=0, phi=360, theta=1)
 
 # Write
 Found2FN = outputFN + "sys2_moved.dcd"
 ConfGen.TrajWriter.writeTraj(conformations, out_FN=Found2FN)
+
+sys.exit()
 
 # Score
 Sys1 = ConfGen.TrajLoader.TrajectoryLoader(Sys1Top, Aligned1FN)[0]
