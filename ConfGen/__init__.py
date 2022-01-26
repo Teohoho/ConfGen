@@ -1,4 +1,4 @@
-from . import TrajLoader, Search, TrajWriter, AlignSystem, Scoring
+from . import Search, TrajWriter, AlignSystem, Scoring
 
 #TODO: ADD A GENERALIZED WAY TO ALIGN A SYSTEM CONSISTING OF AN INFINITE AMMOUNT OF HELICES. (done)
 
@@ -8,6 +8,6 @@ from . import TrajLoader, Search, TrajWriter, AlignSystem, Scoring
 #   which gives a way to generate an eliptical orbit TM.
     # need to define a long axis and a short axis
 
-#TODO:Remove trajloader? can be replaced by a simple mdtraj command.
+#TODO:Remove trajloader? can be replaced by a simple mdtraj command. (done)
 
 #TODO: Do something about the class descriptions, they're unreadeable.

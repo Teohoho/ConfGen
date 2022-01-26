@@ -1,27 +1,32 @@
 import numpy as np
 
+import mdtraj as md
 import ConfGen
 import sys
+
 # Load the systems (monteverdi)
-#Sys1Top = "../getConformations/ZAR1_individual_helics/h2/h2l.prmtop"
-#Sys1Coord = "../getConformations/ZAR1_individual_helics/h2/h2l_min.inpcrd"
-#Sys2Top = "../getConformations/ZAR1_individual_helics/h3/h3s.prmtop"
-#Sys2Coord = "../getConformations/ZAR1_individual_helics/h3/h3s_min.inpcrd"
+Sys1Top =   "../getConformations/ZAR1_individual_helics/h2/h2l.prmtop"
+Sys1Coord = "../getConformations/ZAR1_individual_helics/h2/h2l_min.inpcrd"
+Sys2Top =   "../getConformations/ZAR1_individual_helics/h3/h3s.prmtop"
+Sys2Coord = "../getConformations/ZAR1_individual_helics/h3/h3s_min.inpcrd"
+Sys3Top =   "../getConformations/ZAR1_individual_helics/h3/h3s.prmtop"
+Sys3Coord = "../getConformations/ZAR1_individual_helics/h3/h3s_min.inpcrd"
+
 
 # Load the systems (Home)
-Sys1Top =   "../ZAR1_individual_helics/h2/h2l.prmtop"
-Sys1Coord = "../ZAR1_individual_helics/h2/h2l_min.inpcrd"
-Sys2Top =   "../ZAR1_individual_helics/h3/h3s.prmtop"
-Sys2Coord = "../ZAR1_individual_helics/h3/h3s_min.inpcrd"
-
+#Sys1Top =   "../ZAR1_individual_helics/h2/h2l.prmtop"
+#Sys1Coord = "../ZAR1_individual_helics/h2/h2l_min.inpcrd"
+#Sys2Top =   "../ZAR1_individual_helics/h3/h3s.prmtop"
+#Sys2Coord = "../ZAR1_individual_helics/h3/h3s_min.inpcrd"
 #Sys3Coord = "output/rank0.pdb"
 
 
 #Sys3 = ConfGen.TrajLoader.TrajectoryLoader(Sys3Coord, Sys3Coord)
-Sys1 = ConfGen.TrajLoader.TrajectoryLoader(Sys1Top, Sys1Coord)
-Sys2 = ConfGen.TrajLoader.TrajectoryLoader(Sys2Top, Sys2Coord)
+Sys1 = md.load(Sys1Coord, top=Sys1Top)
+Sys2 = md.load(Sys2Coord, top=Sys2Top)
+Sys3 = md.load(Sys3Coord, top=Sys3Top)
 
-outputFN = "./output/"
+outputFN = "../output/"
 
 # Align the systems to the Y axis
 alignedPos1 = ConfGen.AlignSystem.alignToAxis(Sys1, axis="y")
@@ -33,32 +38,32 @@ alignedPos2 = ConfGen.AlignSystem.alignToAxis(Sys2, axis="y")
 # that everything went smoothly
 Aligned1FN = outputFN + "Sys1.rst7"
 Aligned2FN = outputFN + "Sys2.rst7"
-#Aligned3FN = outputFN + "Sys3.rst7"
+Aligned3FN = outputFN + "Sys3.rst7"
 
 #print (Aligned1FN.split(".")[-1])
 
 ConfGen.TrajWriter.writeTraj(alignedPos1[0], out_FN=Aligned1FN)
 ConfGen.TrajWriter.writeTraj(alignedPos2[0], out_FN=Aligned2FN)
-#ConfGen.TrajWriter.writeTraj(alignedPos3, out_FN=Aligned3FN)
+#ConfGen.TrajWriter.writeTraj(alignedPos3[0], out_FN=Aligned3FN)
 
+## First search conformations of Helix2 relative to Helix 1
 # Set minimum distance between helices
-longAx =  alignedPos1[1] + 0.1
-shortAx = alignedPos1[2] + 0.1
-
+axesRatio = alignedPos1[1]/alignedPos1[2]
+offset = 1
+longAx =  alignedPos1[1] + offset
+shortAx = alignedPos1[2] + offset*axesRatio
 print(longAx, shortAx)
 
 # Search
-conformations = ConfGen.Search.Search(alignedPos2[0], (longAx,shortAx), ndelta=0, phi=360, theta=1)
+conformations = ConfGen.Search.Search(alignedPos2[0], (longAx,shortAx), ndelta=7, phi=45, theta=45)
 
 # Write
 Found2FN = outputFN + "sys2_moved.dcd"
 ConfGen.TrajWriter.writeTraj(conformations, out_FN=Found2FN)
 
-sys.exit()
-
 # Score
-Sys1 = ConfGen.TrajLoader.TrajectoryLoader(Sys1Top, Aligned1FN)[0]
-Sys2 = ConfGen.TrajLoader.TrajectoryLoader(Sys2Top, Found2FN)[0]
+Sys1 = md.load(Aligned1FN, top=Sys1Top)
+Sys2 = md.load(Found2FN, top=Sys2Top)
 
 orderedFrames = ConfGen.Scoring.evaluateScore(Sys1, Sys2,[
                                         #[["ILE"], ["ILE"], ["ILE"]]
@@ -86,7 +91,6 @@ with open("{}/scores.txt".format(outputFN), "w") as f:
 NFrames = np.arange(0,len(orderedFrames), dtype="int")
 NFrames = np.interp(NFrames, (NFrames.min(), NFrames.max()), (-255,255)).astype("int")
 
-
 with open(outputFN + "color.pml", "w") as f:
     for frameIx in range(len(orderedFrames)):
         f.write("load {}/rank{}.pdb\n".format(outputFN, frameIx))
@@ -102,3 +106,52 @@ with open(outputFN + "color.pml", "w") as f:
                 f.write("color 0x{0}{0}ff, m. rank{1}\n".format(hex(255 - NFrames[frameIx])[2:], frameIx))
 
 print ("PyMOL input file written!")
+
+
+## Then search conformations of Helix3 relative to the highest scoring conformation
+## of Helix 1-2
+Sys12 = md.load("../output/rank0.pdb")
+alignedPos3 = ConfGen.AlignSystem.alignToAxis(Sys3, axis="y")
+alignedPos12 = ConfGen.AlignSystem.alignToAxis(Sys12, axis="y",
+                            CenterAxisSele=["resid 0 to 3","resid 21 to 24"])
+
+# Write the newly aligned Sys12 and Sys3 to disk
+Aligned12FN = outputFN + "Sys12.pdb"
+ConfGen.TrajWriter.writeTraj(alignedPos12[0], out_FN=Aligned12FN,
+                             topology=Sys12.topology)
+Sys12 = md.load(Aligned12FN)
+
+axesRatio = alignedPos12[1]/alignedPos12[2]
+offset = 1
+longAx = alignedPos12[1] + 1
+shortAx = alignedPos12[2] + 1*offset
+print(longAx, shortAx)
+
+# Search
+conformations = ConfGen.Search.Search(alignedPos3[0], (longAx,shortAx), ndelta=7, phi=45, theta=45)
+
+# Write
+Found3FN = outputFN + "sys3_moved.dcd"
+ConfGen.TrajWriter.writeTraj(conformations, out_FN=Found3FN)
+Sys3 = md.load(Found3FN, top=Sys3Top)
+
+orderedFrames = ConfGen.Scoring.evaluateScore(Sys12, Sys3,[
+                                        #[["ILE"], ["ILE"], ["ILE"]]
+                                        #[["LEU","ALA"], ["ASN","GLY"], ["PHE"]],
+                                        [["ILE"], ["LEU"], ["VAL"], ["PHE"], ["ALA"], ["MET"], ["TYR"], ["TRP"]],
+                                        [["ASP", "GLU"], ["LYS", "ARG"]],
+                                        [["ASP"], ["GLU"]],
+                                        [["LYS"], ["ARG"]]
+                                        ],
+                                        score=[1, 10, 0, 0], cutoff=[1, 1, 1, 1])
+
+# Write the absolute score and corresponding frame to an ASCII file
+with open("{}/scores_2ndRun.txt".format(outputFN), "w") as f:
+    f.write("RANK\t|SCORE\n")
+    for frameIx in range(len(orderedFrames)):
+        f.write ("{}\t|{}\n".format(frameIx, orderedFrames[frameIx][1]))
+        ConfGen.TrajWriter.writeTraj(orderedFrames[frameIx][0].xyz,
+                                     out_FN="{}/rank{}_2ndRun.pdb".format(outputFN,frameIx),
+                                     topology=orderedFrames[frameIx][0].topology,
+                                     verbosity=False
+                                     )

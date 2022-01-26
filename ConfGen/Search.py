@@ -81,8 +81,6 @@ def Search(pos2, axes, theta=45, phi=45, delta=0.27, ndelta=0):
                       "360. A full rotation will not be achieved")
 
 
-
-
     # Define Z axis (translation)
     translation_axis = np.array([0, 0, 1])
 
@@ -95,7 +93,7 @@ def Search(pos2, axes, theta=45, phi=45, delta=0.27, ndelta=0):
             sys2 = np.array(phi_vector.apply(sys2))
 
     # Translate along the selected axis
-        sys2 = np.array(sys2 + (translation_axis * axes[0]))
+        sys2 = np.array(sys2 + (translation_axis * axes[0]/2))
 
     # Translate by delta
         for i in range(-ndelta, ndelta+1):
@@ -105,7 +103,7 @@ def Search(pos2, axes, theta=45, phi=45, delta=0.27, ndelta=0):
             # Define a center point which we move in an elliptical orbit. We don't
             # move the entire protein to avoid skewing that comes with an
             # elliptical motion
-            centralPoint = np.array(translation_axis * axes[0])
+            centralPoint = np.array(translation_axis * axes[0]/2)
 
             for thetaIx in range(thetaIterations):
                 # Define the elliptical TM
