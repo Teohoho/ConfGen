@@ -9,14 +9,14 @@ def centroidPoints(arr):
     sum_z = np.sum(arr[:, 2])
     return np.array([sum_x/length, sum_y/length, sum_z/length])
 
-def ellipticalOrbit(theta,a1,a2):
-    ETM = np.array([[np.cos(theta), 0, -(np.sqrt(a2)/np.sqrt(a1)*np.sin(theta))],
+def ellipticalOrbit(theta,ratio):
+    ETM = np.array([[np.cos(theta), 0, -np.sqrt(ratio**(-1))*np.sin(theta)],
                     [0,1,0],
-                    [(np.sqrt(a1)/np.sqrt(a2))*np.sin(theta), 0, np.cos(theta)]])
+                    [ratio*np.sin(theta), 0, np.cos(theta)]])
 
     return (ETM)
 
-def Search(pos2, axes, theta=45, phi=45, delta=0.27, ndelta=0):
+def Search(pos2, offset, axesRatio, theta=45, phi=45, delta=0.27, ndelta=0):
     """
     Function that searches the conformational space by translating and rotating
     relative to the Y-axis
@@ -28,10 +28,13 @@ def Search(pos2, axes, theta=45, phi=45, delta=0.27, ndelta=0):
                 array, shape (N,3), of the rotated positions
                 of the two systems. in nm!
 
+    offset:     float
+                measure of how much to offset the system (pos2)
+                from the origin (in nm)
 
-    axes:       tuple
-                the sizes of the two axes that make up
-                the ellipse, whose motion will be followed by the system
+    axesRatio:  float
+                ratio of the axes for the elliptical motion to be
+                used
 
     theta:      float
                 increment by which to increase the rotation of
@@ -67,10 +70,6 @@ def Search(pos2, axes, theta=45, phi=45, delta=0.27, ndelta=0):
 
     conformations = np.zeros((0, pos2.shape[0], 3))
 
-    # Check data
-    if (not (isinstance(axes, tuple))) or len(axes) != 2:
-        raise TypeError("Axes should be a tuple containing 2 elements")
-
     # Set up number of rotations
     thetaIterations = np.int(360/theta)
     phiIterations = np.int(360/phi)
@@ -93,7 +92,7 @@ def Search(pos2, axes, theta=45, phi=45, delta=0.27, ndelta=0):
             sys2 = np.array(phi_vector.apply(sys2))
 
     # Translate along the selected axis
-        sys2 = np.array(sys2 + (translation_axis * axes[0]/2))
+        sys2 = np.array(sys2 + (translation_axis * offset))
 
     # Translate by delta
         for i in range(-ndelta, ndelta+1):
@@ -101,17 +100,14 @@ def Search(pos2, axes, theta=45, phi=45, delta=0.27, ndelta=0):
             sys3 = sys3 + (np.array([0,1,0])*i*delta)
 
             # Define a center point which we move in an elliptical orbit. We don't
-            # move the entire protein to avoid skewing that comes with an
+            # move the entire protein to avoid the skewing that comes with an
             # elliptical motion
-            centralPoint = np.array(translation_axis * axes[0]/2)
+            centralPoint = np.array(translation_axis * offset)
 
             for thetaIx in range(thetaIterations):
                 # Define the elliptical TM
                 sys4 = np.zeros(sys3.shape)
-                ellipticalTM = ellipticalOrbit(np.radians(theta*thetaIx), axes[0], axes[1])
-                #theta_vector = R.from_matrix(ellipticalTM)
-                #print (ellipticalTM.shape)
-                #print (sys3.shape)
+                ellipticalTM = ellipticalOrbit(np.radians(theta*thetaIx), axesRatio)
                 movedPoint = np.matmul(ellipticalTM,centralPoint)
                 for atomIx in range(sys3.shape[0]):
                     sys4[atomIx] = sys3[atomIx] + movedPoint - centralPoint

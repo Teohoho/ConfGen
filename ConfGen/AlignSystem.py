@@ -120,19 +120,22 @@ def alignToAxis(system, axis="y", CenterAxisSele=None):
     # First, we find the distance that is the farthest away from the (0,0,0), in the XZ plane
     if (np.max(np.absolute(aligned_atoms[:,0])) > np.max(np.absolute(aligned_atoms[:,2]))):
         #print(np.argmax(np.absolute(aligned_atoms[:, 0])))
+        print ("X is largest!")
         farthestAtomIx = np.argmax(np.absolute(aligned_atoms[:, 0]))
     else:
         #print(np.argmax(np.absolute(aligned_atoms[:, 2])))
+        print("Z is largest!")
         farthestAtomIx = np.argmax(np.absolute(aligned_atoms[:, 2]))
 
-    #print ("Farthest atom from the centerpoint, in the XZ plane, is {} (index {})".format(aligned_atoms[farthestAtomIx],
-    #                                                                    farthestAtomIx))
+    print ("Farthest atom from the centerpoint, in the XZ plane, is {} (index {})".
+           format(aligned_atoms[farthestAtomIx], farthestAtomIx))
 
     # Compute the angle we need to rotate by to align said atom to the Z axis.
     farthestAtom=aligned_atoms[farthestAtomIx]
     #print (farthestAtom)
     farthestAtom = farthestAtom / np.linalg.norm(farthestAtom)
     rot_ang = acos(abs(farthestAtom[2])/sqrt(pow(farthestAtom[0],2) + pow(farthestAtom[2],2)))
+    print (np.degrees(rot_ang))
 
     if (farthestAtom[2]>0):
         signage=-1
@@ -142,18 +145,19 @@ def alignToAxis(system, axis="y", CenterAxisSele=None):
     rot_vec = R.from_rotvec(np.array([0,1,0]) * (rot_ang * signage))
     aligned_atoms = rot_vec.apply(aligned_atoms)
 
-    longAxis=abs(aligned_atoms[farthestAtomIx][2]*2)
-
+    longAxis=abs(aligned_atoms[farthestAtomIx][2])
+    print(aligned_atoms[farthestAtomIx])
     # Now we can get the short axis, by getting the atom that is the
     # farthest from the center on the x axis
     farthestAtomIx = np.argmax(np.absolute(aligned_atoms[:, 0]))
-    #print ("Farthest point on the X axis: {} (index {})".format(
-    #    aligned_atoms[farthestAtomIx],farthestAtomIx))
-    shortAxis=abs(aligned_atoms[farthestAtomIx][0]*2)
+    print ("Farthest point on the X axis: {} (index {})".format(
+        aligned_atoms[farthestAtomIx],farthestAtomIx))
+    shortAxis=abs(aligned_atoms[farthestAtomIx][0])
+    print(aligned_atoms[farthestAtomIx])
 
     # Long ellipsis axis:
-    #print ("Long axis: {} nm".format(longAxis))
-    #print ("Short axis: {} nm".format(shortAxis))
+    print ("Long axis: {} nm".format(longAxis))
+    print ("Short axis: {} nm".format(shortAxis))
 
     return (aligned_atoms, longAxis, shortAxis)
 

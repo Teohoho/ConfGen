@@ -69,6 +69,7 @@ def evaluateScore(sys1, sys2, residues, score, cutoff=0.7):
 
     fullSystem = sys1.stack(sys2)
 
+    print (sys1.n_chains)
 
 
     # Generate residues list

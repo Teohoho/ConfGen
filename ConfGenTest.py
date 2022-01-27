@@ -11,7 +11,8 @@ Sys2Top =   "../getConformations/ZAR1_individual_helics/h3/h3s.prmtop"
 Sys2Coord = "../getConformations/ZAR1_individual_helics/h3/h3s_min.inpcrd"
 Sys3Top =   "../getConformations/ZAR1_individual_helics/h3/h3s.prmtop"
 Sys3Coord = "../getConformations/ZAR1_individual_helics/h3/h3s_min.inpcrd"
-
+Sys4Top =   "../getConformations/ZAR1_individual_helics/h3/h3s.prmtop"
+Sys4Coord = "../getConformations/ZAR1_individual_helics/h3/h3s_min.inpcrd"
 
 # Load the systems (Home)
 #Sys1Top =   "../ZAR1_individual_helics/h2/h2l.prmtop"
@@ -25,6 +26,7 @@ Sys3Coord = "../getConformations/ZAR1_individual_helics/h3/h3s_min.inpcrd"
 Sys1 = md.load(Sys1Coord, top=Sys1Top)
 Sys2 = md.load(Sys2Coord, top=Sys2Top)
 Sys3 = md.load(Sys3Coord, top=Sys3Top)
+Sys4 = md.load(Sys3Coord, top=Sys3Top)
 
 outputFN = "../output/"
 
@@ -39,6 +41,8 @@ alignedPos2 = ConfGen.AlignSystem.alignToAxis(Sys2, axis="y")
 Aligned1FN = outputFN + "Sys1.rst7"
 Aligned2FN = outputFN + "Sys2.rst7"
 Aligned3FN = outputFN + "Sys3.rst7"
+Aligned4FN = outputFN + "Sys4.rst7"
+
 
 #print (Aligned1FN.split(".")[-1])
 
@@ -48,14 +52,18 @@ ConfGen.TrajWriter.writeTraj(alignedPos2[0], out_FN=Aligned2FN)
 
 ## First search conformations of Helix2 relative to Helix 1
 # Set minimum distance between helices
-axesRatio = alignedPos1[1]/alignedPos1[2]
-offset = 1
-longAx =  alignedPos1[1] + offset
-shortAx = alignedPos1[2] + offset*axesRatio
-print(longAx, shortAx)
+longAx = alignedPos1[1]
+shortAx = alignedPos1[2]
+axesRatio = longAx/shortAx
+print (longAx)
+print (shortAx)
+print()
+print (axesRatio)
+offset = longAx
 
 # Search
-conformations = ConfGen.Search.Search(alignedPos2[0], (longAx,shortAx), ndelta=7, phi=45, theta=45)
+conformations = ConfGen.Search.Search(alignedPos2[0], offset=offset,
+                                      axesRatio=axesRatio, ndelta=0, phi=15, theta=15)
 
 # Write
 Found2FN = outputFN + "sys2_moved.dcd"
@@ -73,7 +81,7 @@ orderedFrames = ConfGen.Scoring.evaluateScore(Sys1, Sys2,[
                                         [["ASP"], ["GLU"]],
                                         [["LYS"], ["ARG"]]
                                         ],
-                                        score=[1, 10, 0, 0], cutoff=[1, 1, 1, 1])
+                                        score=[10, 10, -10, -10], cutoff=[1, 1, 1, 1])
 
 # Write the absolute score and corresponding frame to an ASCII file
 with open("{}/scores.txt".format(outputFN), "w") as f:
@@ -107,13 +115,13 @@ with open(outputFN + "color.pml", "w") as f:
 
 print ("PyMOL input file written!")
 
-
 ## Then search conformations of Helix3 relative to the highest scoring conformation
-## of Helix 1-2
+## of Helix 1/2
 Sys12 = md.load("../output/rank0.pdb")
 alignedPos3 = ConfGen.AlignSystem.alignToAxis(Sys3, axis="y")
 alignedPos12 = ConfGen.AlignSystem.alignToAxis(Sys12, axis="y",
-                            CenterAxisSele=["resid 0 to 3","resid 21 to 24"])
+                            CenterAxisSele=["(resid 0 to 3) and chainid 0",
+                                            "(resid 21 to 24) and chainid 0"])
 
 # Write the newly aligned Sys12 and Sys3 to disk
 Aligned12FN = outputFN + "Sys12.pdb"
@@ -121,14 +129,18 @@ ConfGen.TrajWriter.writeTraj(alignedPos12[0], out_FN=Aligned12FN,
                              topology=Sys12.topology)
 Sys12 = md.load(Aligned12FN)
 
-axesRatio = alignedPos12[1]/alignedPos12[2]
-offset = 1
-longAx = alignedPos12[1] + 1
-shortAx = alignedPos12[2] + 1*offset
-print(longAx, shortAx)
+longAx = alignedPos12[1]
+shortAx = alignedPos12[2]
+axesRatio = longAx/shortAx
+print (longAx)
+print (shortAx)
+print()
+print (axesRatio)
+offset = longAx
 
 # Search
-conformations = ConfGen.Search.Search(alignedPos3[0], (longAx,shortAx), ndelta=7, phi=45, theta=45)
+conformations = ConfGen.Search.Search(alignedPos3[0], offset=offset, axesRatio=axesRatio,
+                                      ndelta=0, phi=15, theta=15)
 
 # Write
 Found3FN = outputFN + "sys3_moved.dcd"
@@ -152,6 +164,59 @@ with open("{}/scores_2ndRun.txt".format(outputFN), "w") as f:
         f.write ("{}\t|{}\n".format(frameIx, orderedFrames[frameIx][1]))
         ConfGen.TrajWriter.writeTraj(orderedFrames[frameIx][0].xyz,
                                      out_FN="{}/rank{}_2ndRun.pdb".format(outputFN,frameIx),
+                                     topology=orderedFrames[frameIx][0].topology,
+                                     verbosity=False
+                                     )
+
+## Then search conformations of Helix4 relative to the highest scoring conformation
+## of Helix 1/2/3
+Sys123 = md.load("../output/rank0_2ndRun.pdb")
+alignedPos4 = ConfGen.AlignSystem.alignToAxis(Sys4, axis="y")
+alignedPos123 = ConfGen.AlignSystem.alignToAxis(Sys123, axis="y",
+                            CenterAxisSele=["(resid 0 to 3) and chainid 0",
+                                            "(resid 21 to 24) and chainid 0"])
+
+# Write the newly aligned Sys12 and Sys3 to disk
+Aligned123FN = outputFN + "Sys123.pdb"
+ConfGen.TrajWriter.writeTraj(alignedPos123[0], out_FN=Aligned123FN,
+                             topology=Sys123.topology)
+Sys123 = md.load(Aligned123FN)
+
+longAx = alignedPos123[1]
+shortAx = alignedPos123[2]
+axesRatio = longAx/shortAx
+print (longAx)
+print (shortAx)
+print()
+print (axesRatio)
+offset = longAx
+
+# Search
+conformations = ConfGen.Search.Search(alignedPos4[0], offset=offset, axesRatio=axesRatio,
+                                      ndelta=0, phi=15, theta=15)
+
+# Write
+Found4FN = outputFN + "sys4_moved.dcd"
+ConfGen.TrajWriter.writeTraj(conformations, out_FN=Found4FN)
+Sys4 = md.load(Found4FN, top=Sys4Top)
+
+orderedFrames = ConfGen.Scoring.evaluateScore(Sys123, Sys4,[
+                                        #[["ILE"], ["ILE"], ["ILE"]]
+                                        #[["LEU","ALA"], ["ASN","GLY"], ["PHE"]],
+                                        [["ILE"], ["LEU"], ["VAL"], ["PHE"], ["ALA"], ["MET"], ["TYR"], ["TRP"]],
+                                        [["ASP", "GLU"], ["LYS", "ARG"]],
+                                        [["ASP"], ["GLU"]],
+                                        [["LYS"], ["ARG"]]
+                                        ],
+                                        score=[1, 10, 0, 0], cutoff=[1, 1, 1, 1])
+
+# Write the absolute score and corresponding frame to an ASCII file
+with open("{}/scores_3rdRun.txt".format(outputFN), "w") as f:
+    f.write("RANK\t|SCORE\n")
+    for frameIx in range(len(orderedFrames)):
+        f.write ("{}\t|{}\n".format(frameIx, orderedFrames[frameIx][1]))
+        ConfGen.TrajWriter.writeTraj(orderedFrames[frameIx][0].xyz,
+                                     out_FN="{}/rank{}_3rdRun.pdb".format(outputFN,frameIx),
                                      topology=orderedFrames[frameIx][0].topology,
                                      verbosity=False
                                      )
