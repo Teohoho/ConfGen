@@ -1,5 +1,6 @@
 import mdtraj as md
 import mdtraj.formats
+import numpy as np
 import os
 
 def writeTraj(positions, out_FN, topology=None, verbosity=True):
@@ -58,6 +59,33 @@ def writeTraj(positions, out_FN, topology=None, verbosity=True):
         if (verbosity):
             print("CHARMM DCD file {} successfully written!".format(out_FN))
 
+def PDBHelper(PDBFile):
+    """
+    A helper function that increments the ResIDs of a protein so its contacts
+    can be computed
+    """
+    f = open(PDBFile).readlines()
+    ResId = 0
+    for lineix in range(len(f)):
+        f[lineix] = f[lineix].split()
+        if (f[lineix][0] == "ATOM"):
+            f[lineix][5] = int(f[lineix][5]) + ResId
+        if (f[lineix][0] == "TER"):
+            ResId = f[lineix-1][5] + 1
 
+    g = open(PDBFile, "w")
+    for lineix in range(len(f)):
+        if (f[lineix][0] == "ATOM"):
+            g.write("{:6s}{:5d} {:^4s} {:3s} {:1s}{:4d} "
+                "   {:8.3f}{:8.3f}{:8.3f}{:6.2f}{:6.2f}"
+                "          {:>2s}  \n".format(f[lineix][0],int(f[lineix][1]),f[lineix][2],
+                                            f[lineix][3],f[lineix][4],int(f[lineix][5]),
+                                            float(f[lineix][6]),float(f[lineix][7]),float(f[lineix][8]),
+                                            float(f[lineix][9]), float(f[lineix][10]),f[lineix][11]))
+        if (f[lineix][0] == "TER"):
+            g.write("TER\n")
+        if (f[lineix][0] == "END"):
+            g.write("END\n")
+    g.close()
 
 

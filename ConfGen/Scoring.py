@@ -85,14 +85,16 @@ def evaluateScore(sys1, sys2, residues, score, cutoff=0.7):
     contactMatrix = np.zeros((fullSystem.n_frames, sys1.n_residues, sys2.n_residues))
     for i in range(0,sys1.n_residues):
         for j in range(0,sys2.n_residues):
+
             sys2ResId = j + sys1.n_residues
+            #print(i, sys2ResId)
             contactCheck = md.compute_contacts(fullSystem, contacts=[[i,sys2ResId]]
-                                               #query_indices=queryAtoms,
-                                               #haystack_indices=haystackAtoms
                                                )[0].flatten()
             contactMatrix[:,i,j] = contactCheck
 
     # We also generate two lists of resnames, so we have a way to get back indices later
+    for i in fullSystem.topology.residues:
+        print (i)
     resList1 = resList[0:sys1.n_residues]
     resList2 = resList[sys1.n_residues:]
 

@@ -19,14 +19,16 @@ Sys1Top =   "../ZAR1_individual_helics/h2/h2l.prmtop"
 Sys1Coord = "../ZAR1_individual_helics/h2/h2l_min.inpcrd"
 Sys2Top =   "../ZAR1_individual_helics/h3/h3s.prmtop"
 Sys2Coord = "../ZAR1_individual_helics/h3/h3s_min.inpcrd"
-Sys3Coord = "Output/rank0.pdb"
-
+Sys3Top =   "../ZAR1_individual_helics/h3/h3s.prmtop"
+Sys3Coord = "../ZAR1_individual_helics/h3/h3s_min.inpcrd"
+Sys4Top =   "../ZAR1_individual_helics/h3/h3s.prmtop"
+Sys4Coord = "../ZAR1_individual_helics/h3/h3s_min.inpcrd"
 
 #Sys3 = ConfGen.TrajLoader.TrajectoryLoader(Sys3Coord, Sys3Coord)
 Sys1 = md.load(Sys1Coord, top=Sys1Top)
 Sys2 = md.load(Sys2Coord, top=Sys2Top)
-#Sys3 = md.load(Sys3Coord, top=Sys3Top)
-#Sys4 = md.load(Sys3Coord, top=Sys3Top)
+Sys3 = md.load(Sys3Coord, top=Sys3Top)
+Sys4 = md.load(Sys4Coord, top=Sys4Top)
 
 outputFN = "./Output/"
 
@@ -35,8 +37,8 @@ print("Sys1")
 alignedPos1 = ConfGen.AlignSystem.alignToAxis(Sys1, axis="y")
 print("Sys2")
 alignedPos2 = ConfGen.AlignSystem.alignToAxis(Sys2, axis="y")
-#alignedPos3 = ConfGen.AlignSystem.alignToAxis(Sys3, axis="y",
-#                            CenterAxisSele=["resid 0 to 3","resid 21 to 24"])
+alignedPos3 = ConfGen.AlignSystem.alignToAxis(Sys3, axis="y")
+                          #  CenterAxisSele=["resid 0 to 3","resid 21 to 24"])
 
 # Save the aligned systems and visualize them in VMD, to check
 # that everything went smoothly
@@ -50,7 +52,7 @@ Aligned4FN = outputFN + "Sys4.rst7"
 
 ConfGen.TrajWriter.writeTraj(alignedPos1[0], out_FN=Aligned1FN)
 ConfGen.TrajWriter.writeTraj(alignedPos2[0], out_FN=Aligned2FN)
-#ConfGen.TrajWriter.writeTraj(alignedPos3[0], out_FN=Aligned3FN)
+ConfGen.TrajWriter.writeTraj(alignedPos3[0], out_FN=Aligned3FN)
 
 ## First search conformations of Helix2 relative to Helix 1
 # Set minimum distance between helices
@@ -95,6 +97,7 @@ with open("{}/scores.txt".format(outputFN), "w") as f:
                                      topology=orderedFrames[frameIx][0].topology,
                                      verbosity=False
                                      )
+        #ConfGen.TrajWriter.PDBHelper("{}/rank{}.pdb".format(outputFN,frameIx))
 
 # We generate a .pml file to color the above configurations in PyMOL, for easier visualization
 # Assign a color value to each frame, based on ranking
@@ -126,8 +129,6 @@ print("Sys12")
 alignedPos12 = ConfGen.AlignSystem.alignToAxis(Sys12, axis="y",
                             CenterAxisSele=["(resid 0 to 3) and chainid 0",
                                             "(resid 21 to 24) and chainid 0"])
-
-sys.exit()
 
 # Write the newly aligned Sys12 and Sys3 to disk
 Aligned12FN = outputFN + "Sys12.pdb"
@@ -173,7 +174,7 @@ with open("{}/scores_2ndRun.txt".format(outputFN), "w") as f:
                                      topology=orderedFrames[frameIx][0].topology,
                                      verbosity=False
                                      )
-
+        #ConfGen.TrajWriter.PDBHelper("{}/rank{}_2ndRun.pdb".format(outputFN,frameIx))
 ## Then search conformations of Helix4 relative to the highest scoring conformation
 ## of Helix 1/2/3
 Sys123 = md.load("./Output/rank0_2ndRun.pdb")
@@ -228,3 +229,4 @@ with open("{}/scores_3rdRun.txt".format(outputFN), "w") as f:
                                      topology=orderedFrames[frameIx][0].topology,
                                      verbosity=False
                                      )
+        #ConfGen.TrajWriter.PDBHelper("{}/rank{}_3rdRun.pdb".format(outputFN,frameIx))
