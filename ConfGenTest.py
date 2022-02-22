@@ -5,28 +5,28 @@ import ConfGen
 import sys
 
 # Load the systems (monteverdi)
-Sys1Top =   "../getConformations/ZAR1_individual_helics/h2/h2l.prmtop"
-Sys1Coord = "../getConformations/ZAR1_individual_helics/h2/h2l_min.inpcrd"
-Sys2Top =   "../getConformations/ZAR1_individual_helics/h3/h3s.prmtop"
-Sys2Coord = "../getConformations/ZAR1_individual_helics/h3/h3s_min.inpcrd"
-Sys3Top =   "../getConformations/ZAR1_individual_helics/h3/h3s.prmtop"
-Sys3Coord = "../getConformations/ZAR1_individual_helics/h3/h3s_min.inpcrd"
-Sys4Top =   "../getConformations/ZAR1_individual_helics/h3/h3s.prmtop"
-Sys4Coord = "../getConformations/ZAR1_individual_helics/h3/h3s_min.inpcrd"
+#Sys1Top =   "../getConformations/ZAR1_individual_helics/h2/h2l.prmtop"
+#Sys1Coord = "../getConformations/ZAR1_individual_helics/h2/h2l_min.inpcrd"
+#Sys2Top =   "../getConformations/ZAR1_individual_helics/h3/h3s.prmtop"
+#Sys2Coord = "../getConformations/ZAR1_individual_helics/h3/h3s_min.inpcrd"
+#Sys3Top =   "../getConformations/ZAR1_individual_helics/h3/h3s.prmtop"
+#Sys3Coord = "../getConformations/ZAR1_individual_helics/h3/h3s_min.inpcrd"
+#Sys4Top =   "../getConformations/ZAR1_individual_helics/h3/h3s.prmtop"
+#Sys4Coord = "../getConformations/ZAR1_individual_helics/h3/h3s_min.inpcrd"
 
 # Load the systems (Home)
-#Sys1Top =   "../ZAR1_individual_helics/h2/h2l.prmtop"
-#Sys1Coord = "../ZAR1_individual_helics/h2/h2l_min.inpcrd"
-#Sys2Top =   "../ZAR1_individual_helics/h3/h3s.prmtop"
-#Sys2Coord = "../ZAR1_individual_helics/h3/h3s_min.inpcrd"
-#Sys3Coord = "output/rank0.pdb"
+Sys1Top =   "../ZAR1_individual_helics/h2/h2l.prmtop"
+Sys1Coord = "../ZAR1_individual_helics/h2/h2l_min.inpcrd"
+Sys2Top =   "../ZAR1_individual_helics/h3/h3s.prmtop"
+Sys2Coord = "../ZAR1_individual_helics/h3/h3s_min.inpcrd"
+Sys3Coord = "Output/rank0.pdb"
 
 
 #Sys3 = ConfGen.TrajLoader.TrajectoryLoader(Sys3Coord, Sys3Coord)
 Sys1 = md.load(Sys1Coord, top=Sys1Top)
 Sys2 = md.load(Sys2Coord, top=Sys2Top)
-Sys3 = md.load(Sys3Coord, top=Sys3Top)
-Sys4 = md.load(Sys3Coord, top=Sys3Top)
+#Sys3 = md.load(Sys3Coord, top=Sys3Top)
+#Sys4 = md.load(Sys3Coord, top=Sys3Top)
 
 outputFN = "./Output/"
 
@@ -119,13 +119,15 @@ print ("PyMOL input file written!")
 
 ## Then search conformations of Helix3 relative to the highest scoring conformation
 ## of Helix 1/2
-Sys12 = md.load("../output/rank0.pdb")
-print("Sys3")
-alignedPos3 = ConfGen.AlignSystem.alignToAxis(Sys3, axis="y")
+Sys12 = md.load("./Output/rank0.pdb")
+#print("Sys3")
+#alignedPos3 = ConfGen.AlignSystem.alignToAxis(Sys3, axis="y")
 print("Sys12")
 alignedPos12 = ConfGen.AlignSystem.alignToAxis(Sys12, axis="y",
                             CenterAxisSele=["(resid 0 to 3) and chainid 0",
                                             "(resid 21 to 24) and chainid 0"])
+
+sys.exit()
 
 # Write the newly aligned Sys12 and Sys3 to disk
 Aligned12FN = outputFN + "Sys12.pdb"
@@ -174,7 +176,7 @@ with open("{}/scores_2ndRun.txt".format(outputFN), "w") as f:
 
 ## Then search conformations of Helix4 relative to the highest scoring conformation
 ## of Helix 1/2/3
-Sys123 = md.load("../output/rank0_2ndRun.pdb")
+Sys123 = md.load("./Output/rank0_2ndRun.pdb")
 print ("Sys4")
 alignedPos4 = ConfGen.AlignSystem.alignToAxis(Sys4, axis="y")
 print ("Sys123")

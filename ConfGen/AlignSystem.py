@@ -148,10 +148,15 @@ def alignToAxis(system, axis="y", CenterAxisSele=None):
     print (np.degrees(rot_ang))
 
     if (farthestAtom[2]>0):
-        signage=-1
+        zsign = -1
     else:
-        signage=+1
+        zsign= 1
+    if (farthestAtom[0]>0):
+        xsign = 1
+    else:
+        xsign = -1
 
+    signage = zsign*xsign
     rot_vec = R.from_rotvec(np.array([0,1,0]) * (rot_ang * signage))
     aligned_atoms = rot_vec.apply(aligned_atoms)
     print (aligned_atoms[farthestAtomIx])
