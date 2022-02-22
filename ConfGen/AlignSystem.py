@@ -11,7 +11,6 @@ def centroidPoints(arr):
 
 def alignToAxis(system, axis="y", CenterAxisSele=None):
     """
-
     Parameters
     ----------
     system:  MDTrajTrajectory Object
@@ -117,24 +116,35 @@ def alignToAxis(system, axis="y", CenterAxisSele=None):
 
     # In addition to centering the system on (0,0,0), we also rotate it so the longest side
     # chain is oriented along the Z axis.
-    # First, we find the distance that is the farthest away from the (0,0,0), in the XZ plane
-    if (np.max(np.absolute(aligned_atoms[:,0])) > np.max(np.absolute(aligned_atoms[:,2]))):
+    # First, we find the atom that is farthest away from the (0,0,0), on the XZ plane
+    # We do this by computing the max(sqrt(x^2+z^2))
+    #if (np.max(np.absolute(aligned_atoms[:,0])) > np.max(np.absolute(aligned_atoms[:,2]))):
         #print(np.argmax(np.absolute(aligned_atoms[:, 0])))
-        print ("X is largest!")
-        farthestAtomIx = np.argmax(np.absolute(aligned_atoms[:, 0]))
-    else:
+    #    print ("X is largest!")
+    #    farthestAtomIx = np.argmax(np.absolute(aligned_atoms[:, 0]))
+    #else:
         #print(np.argmax(np.absolute(aligned_atoms[:, 2])))
-        print("Z is largest!")
-        farthestAtomIx = np.argmax(np.absolute(aligned_atoms[:, 2]))
+    #    print("Z is largest!")
+    #    farthestAtomIx = np.argmax(np.absolute(aligned_atoms[:, 2]))
+    farthestAtomIx = 0
+    farthestAtomDistance = 0
+    for atomIx in range(len(aligned_atoms)):
+        atomDistance = sqrt(aligned_atoms[atomIx][0]**2 + aligned_atoms[atomIx][2]**2)
+        if (atomDistance > farthestAtomDistance):
+            farthestAtomIx = atomIx
+            farthestAtomDistance = atomDistance
 
-    print ("Farthest atom from the centerpoint, in the XZ plane, is {} (index {})".
-           format(aligned_atoms[farthestAtomIx], farthestAtomIx))
+    print("Farthest atom found: {} (index {}) ({} nm) ".format(
+          system.topology.atom(farthestAtomIx), farthestAtomIx, farthestAtomDistance))
+    print(aligned_atoms[farthestAtomIx])
+    #print ("Farthest atom from the centerpoint, in the XZ plane, is {} (index {})".
+    #       format(aligned_atoms[farthestAtomIx], farthestAtomIx))
 
     # Compute the angle we need to rotate by to align said atom to the Z axis.
     farthestAtom=aligned_atoms[farthestAtomIx]
     #print (farthestAtom)
     farthestAtom = farthestAtom / np.linalg.norm(farthestAtom)
-    rot_ang = acos(abs(farthestAtom[2])/sqrt(pow(farthestAtom[0],2) + pow(farthestAtom[2],2)))
+    rot_ang = np.arccos(abs(farthestAtom[2])/sqrt(farthestAtom[0]**2 + farthestAtom[2]**2))
     print (np.degrees(rot_ang))
 
     if (farthestAtom[2]>0):
@@ -144,9 +154,9 @@ def alignToAxis(system, axis="y", CenterAxisSele=None):
 
     rot_vec = R.from_rotvec(np.array([0,1,0]) * (rot_ang * signage))
     aligned_atoms = rot_vec.apply(aligned_atoms)
+    print (aligned_atoms[farthestAtomIx])
 
     longAxis=abs(aligned_atoms[farthestAtomIx][2])
-    print(aligned_atoms[farthestAtomIx])
     # Now we can get the short axis, by getting the atom that is the
     # farthest from the center on the x axis
     farthestAtomIx = np.argmax(np.absolute(aligned_atoms[:, 0]))

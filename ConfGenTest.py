@@ -28,10 +28,12 @@ Sys2 = md.load(Sys2Coord, top=Sys2Top)
 Sys3 = md.load(Sys3Coord, top=Sys3Top)
 Sys4 = md.load(Sys3Coord, top=Sys3Top)
 
-outputFN = "../output/"
+outputFN = "./Output/"
 
 # Align the systems to the Y axis
+print("Sys1")
 alignedPos1 = ConfGen.AlignSystem.alignToAxis(Sys1, axis="y")
+print("Sys2")
 alignedPos2 = ConfGen.AlignSystem.alignToAxis(Sys2, axis="y")
 #alignedPos3 = ConfGen.AlignSystem.alignToAxis(Sys3, axis="y",
 #                            CenterAxisSele=["resid 0 to 3","resid 21 to 24"])
@@ -118,7 +120,9 @@ print ("PyMOL input file written!")
 ## Then search conformations of Helix3 relative to the highest scoring conformation
 ## of Helix 1/2
 Sys12 = md.load("../output/rank0.pdb")
+print("Sys3")
 alignedPos3 = ConfGen.AlignSystem.alignToAxis(Sys3, axis="y")
+print("Sys12")
 alignedPos12 = ConfGen.AlignSystem.alignToAxis(Sys12, axis="y",
                             CenterAxisSele=["(resid 0 to 3) and chainid 0",
                                             "(resid 21 to 24) and chainid 0"])
@@ -171,7 +175,9 @@ with open("{}/scores_2ndRun.txt".format(outputFN), "w") as f:
 ## Then search conformations of Helix4 relative to the highest scoring conformation
 ## of Helix 1/2/3
 Sys123 = md.load("../output/rank0_2ndRun.pdb")
+print ("Sys4")
 alignedPos4 = ConfGen.AlignSystem.alignToAxis(Sys4, axis="y")
+print ("Sys123")
 alignedPos123 = ConfGen.AlignSystem.alignToAxis(Sys123, axis="y",
                             CenterAxisSele=["(resid 0 to 3) and chainid 0",
                                             "(resid 21 to 24) and chainid 0"])
