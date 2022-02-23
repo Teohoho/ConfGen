@@ -5,24 +5,24 @@ import ConfGen
 import sys
 
 # Load the systems (monteverdi)
-#Sys1Top =   "../getConformations/ZAR1_individual_helics/h2/h2l.prmtop"
-#Sys1Coord = "../getConformations/ZAR1_individual_helics/h2/h2l_min.inpcrd"
-#Sys2Top =   "../getConformations/ZAR1_individual_helics/h3/h3s.prmtop"
-#Sys2Coord = "../getConformations/ZAR1_individual_helics/h3/h3s_min.inpcrd"
-#Sys3Top =   "../getConformations/ZAR1_individual_helics/h3/h3s.prmtop"
-#Sys3Coord = "../getConformations/ZAR1_individual_helics/h3/h3s_min.inpcrd"
-#Sys4Top =   "../getConformations/ZAR1_individual_helics/h3/h3s.prmtop"
-#Sys4Coord = "../getConformations/ZAR1_individual_helics/h3/h3s_min.inpcrd"
+Sys1Top =   "../getConformations/ZAR1_individual_helics/h2/h2l.prmtop"
+Sys1Coord = "../getConformations/ZAR1_individual_helics/h2/h2l_min.inpcrd"
+Sys2Top =   "../getConformations/ZAR1_individual_helics/h3/h3s.prmtop"
+Sys2Coord = "../getConformations/ZAR1_individual_helics/h3/h3s_min.inpcrd"
+Sys3Top =   "../getConformations/ZAR1_individual_helics/h3/h3s.prmtop"
+Sys3Coord = "../getConformations/ZAR1_individual_helics/h3/h3s_min.inpcrd"
+Sys4Top =   "../getConformations/ZAR1_individual_helics/h3/h3s.prmtop"
+Sys4Coord = "../getConformations/ZAR1_individual_helics/h3/h3s_min.inpcrd"
 
 # Load the systems (Home)
-Sys1Top =   "../ZAR1_individual_helics/h2/h2l.prmtop"
-Sys1Coord = "../ZAR1_individual_helics/h2/h2l_min.inpcrd"
-Sys2Top =   "../ZAR1_individual_helics/h3/h3s.prmtop"
-Sys2Coord = "../ZAR1_individual_helics/h3/h3s_min.inpcrd"
-Sys3Top =   "../ZAR1_individual_helics/h3/h3s.prmtop"
-Sys3Coord = "../ZAR1_individual_helics/h3/h3s_min.inpcrd"
-Sys4Top =   "../ZAR1_individual_helics/h3/h3s.prmtop"
-Sys4Coord = "../ZAR1_individual_helics/h3/h3s_min.inpcrd"
+#Sys1Top =   "../ZAR1_individual_helics/h2/h2l.prmtop"
+#Sys1Coord = "../ZAR1_individual_helics/h2/h2l_min.inpcrd"
+#Sys2Top =   "../ZAR1_individual_helics/h3/h3s.prmtop"
+#Sys2Coord = "../ZAR1_individual_helics/h3/h3s_min.inpcrd"
+#Sys3Top =   "../ZAR1_individual_helics/h3/h3s.prmtop"
+#Sys3Coord = "../ZAR1_individual_helics/h3/h3s_min.inpcrd"
+#Sys4Top =   "../ZAR1_individual_helics/h3/h3s.prmtop"
+#Sys4Coord = "../ZAR1_individual_helics/h3/h3s_min.inpcrd"
 
 #Sys3 = ConfGen.TrajLoader.TrajectoryLoader(Sys3Coord, Sys3Coord)
 Sys1 = md.load(Sys1Coord, top=Sys1Top)
@@ -35,8 +35,10 @@ outputFN = "./Output/"
 # Align the systems to the Y axis
 print("Sys1")
 alignedPos1 = ConfGen.AlignSystem.alignToAxis(Sys1, axis="y")
+print ("===============")
 print("Sys2")
 alignedPos2 = ConfGen.AlignSystem.alignToAxis(Sys2, axis="y")
+print ("===============")
 alignedPos3 = ConfGen.AlignSystem.alignToAxis(Sys3, axis="y")
                           #  CenterAxisSele=["resid 0 to 3","resid 21 to 24"])
 
@@ -125,10 +127,11 @@ print ("PyMOL input file written!")
 Sys12 = md.load("./Output/rank0.pdb")
 #print("Sys3")
 #alignedPos3 = ConfGen.AlignSystem.alignToAxis(Sys3, axis="y")
+print ("===============")
 print("Sys12")
 alignedPos12 = ConfGen.AlignSystem.alignToAxis(Sys12, axis="y",
-                            CenterAxisSele=["(resid 0 to 3) and chainid 0",
-                                            "(resid 21 to 24) and chainid 0"])
+                            CenterAxisSele=["(resid 0 to 3)",
+                                            "(resid 21 to 24)"])
 
 # Write the newly aligned Sys12 and Sys3 to disk
 Aligned12FN = outputFN + "Sys12.pdb"
@@ -163,6 +166,8 @@ orderedFrames = ConfGen.Scoring.evaluateScore(Sys12, Sys3,[
                                         [["LYS"], ["ARG"]]
                                         ],
                                         score=[1, 10, 0, 0], cutoff=[1, 1, 1, 1])
+sys.exit()
+
 
 # Write the absolute score and corresponding frame to an ASCII file
 with open("{}/scores_2ndRun.txt".format(outputFN), "w") as f:

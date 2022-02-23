@@ -106,6 +106,7 @@ def alignToAxis(system, axis="y", CenterAxisSele=None):
     BackbonePositions = np.array(BackbonePositions)
 
     centerpoint = centroidPoints(BackbonePositions)
+    print ("Centerpoint before: {}".format(centerpoint))
 
     for AtomIx in range(aligned_atoms.shape[0]):
         X_offset = np.array([centerpoint[0], 0, 0])
@@ -113,6 +114,12 @@ def alignToAxis(system, axis="y", CenterAxisSele=None):
         Z_offset = np.array([0, 0, centerpoint[2]])
         aligned_atoms[AtomIx] = ((aligned_atoms[AtomIx] - X_offset) - Y_offset) - Z_offset
 
+    BackbonePositions = []
+    for i in range(len(BackboneIndices)):
+        BackbonePositions.append(aligned_atoms[BackboneIndices[i]])
+    BackbonePositions = np.array(BackbonePositions)
+    centerpoint = centroidPoints(BackbonePositions)
+    print("Centerpoint after: {}".format(centerpoint))
 
     # In addition to centering the system on (0,0,0), we also rotate it so the longest side
     # chain is oriented along the Z axis.
@@ -155,8 +162,8 @@ def alignToAxis(system, axis="y", CenterAxisSele=None):
         xsign = 1
     else:
         xsign = -1
-
     signage = zsign*xsign
+
     rot_vec = R.from_rotvec(np.array([0,1,0]) * (rot_ang * signage))
     aligned_atoms = rot_vec.apply(aligned_atoms)
     print (aligned_atoms[farthestAtomIx])
@@ -164,15 +171,16 @@ def alignToAxis(system, axis="y", CenterAxisSele=None):
     longAxis=abs(aligned_atoms[farthestAtomIx][2])
     # Now we can get the short axis, by getting the atom that is the
     # farthest from the center on the x axis
-    farthestAtomIx = np.argmax(np.absolute(aligned_atoms[:, 0]))
+    farthestAtomIxX = np.argmax(np.absolute(aligned_atoms[:, 0]))
     print ("Farthest point on the X axis: {} (index {})".format(
-        aligned_atoms[farthestAtomIx],farthestAtomIx))
-    shortAxis=abs(aligned_atoms[farthestAtomIx][0])
-    print(aligned_atoms[farthestAtomIx])
+        aligned_atoms[farthestAtomIxX],farthestAtomIxX))
+    # In order to compensate for the angle between the farthest X point
+    # vector and the X axis, we need to increase the shortAxis
+    shortAxis=np.sqrt(1/((1-(aligned_atoms[farthestAtomIxX][2]**2/longAxis**2))*1/aligned_atoms[farthestAtomIxX][0]**2))
+    print(aligned_atoms[farthestAtomIxX])
 
     # Long ellipsis axis:
     print ("Long axis: {} nm".format(longAxis))
     print ("Short axis: {} nm".format(shortAxis))
 
     return (aligned_atoms, longAxis, shortAxis)
-

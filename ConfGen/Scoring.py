@@ -92,9 +92,12 @@ def evaluateScore(sys1, sys2, residues, score, cutoff=0.7):
                                                )[0].flatten()
             contactMatrix[:,i,j] = contactCheck
 
+    ## DEBUG
+    for frameix in range(fullSystem.n_frames):
+        np.savetxt("temp_frame_{}.txt".format(frameix), contactMatrix[frameix], fmt="%5.3f")
     # We also generate two lists of resnames, so we have a way to get back indices later
-    for i in fullSystem.topology.residues:
-        print (i)
+    #for i in fullSystem.topology.residues:
+    #    print (i)
     resList1 = resList[0:sys1.n_residues]
     resList2 = resList[sys1.n_residues:]
 
