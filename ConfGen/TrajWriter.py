@@ -54,6 +54,7 @@ def writeTraj(positions, out_FN, topology=None, verbosity=True):
             print("PDB file {} successfully written!".format(out_FN))
 
     elif (out_FN.split(".")[-1]) == "dcd":
+        positions = positions.astype(np.float32)
         with md.formats.DCDTrajectoryFile(out_FN, "w") as f:
             f.write(positions)
         if (verbosity):
@@ -87,5 +88,3 @@ def PDBHelper(PDBFile):
         if (f[lineix][0] == "END"):
             g.write("END\n")
     g.close()
-
-
