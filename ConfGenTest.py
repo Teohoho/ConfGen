@@ -35,20 +35,21 @@ outputFN = "./Output/"
 # Align the systems to the Y axis
 print("Sys1")
 alignedPos1 = ConfGen.AlignSystem.alignToAxis(Sys1, axis="y")
-print ("===============")
-print("Sys2")
-alignedPos2 = ConfGen.AlignSystem.alignToAxis(Sys2, axis="y")
-print ("===============")
-alignedPos3 = ConfGen.AlignSystem.alignToAxis(Sys3, axis="y")
+#print ("===============")
+#print("Sys2")
+#alignedPos2 = ConfGen.AlignSystem.alignToAxis(Sys2, axis="y")
+#print ("===============")
+#alignedPos3 = ConfGen.AlignSystem.alignToAxis(Sys3, axis="y")
                           #  CenterAxisSele=["resid 0 to 3","resid 21 to 24"])
 
 # Save the aligned systems and visualize them in VMD, to check
 # that everything went smoothly
-Aligned1FN = outputFN + "Sys1.rst7"
-Aligned2FN = outputFN + "Sys2.rst7"
-Aligned3FN = outputFN + "Sys3.rst7"
-Aligned4FN = outputFN + "Sys4.rst7"
+Aligned1FN = outputFN + "Sys1_Aligned.rst7"
+#Aligned2FN = outputFN + "Sys2.rst7"
+#Aligned3FN = outputFN + "Sys3.rst7"
+#Aligned4FN = outputFN + "Sys4.rst7"
 
+sys.exit()
 
 #print (Aligned1FN.split(".")[-1])
 

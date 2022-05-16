@@ -3,7 +3,7 @@ import numpy as np
 import datetime, itertools
 from operator import itemgetter
 
-def evaluateScore(sys1, sys2, residues, score, cutoff=0.7):
+def evaluateScore(sys1, sys2, scoreFunction):
     """
 
     Parameters
@@ -11,23 +11,10 @@ def evaluateScore(sys1, sys2, residues, score, cutoff=0.7):
     sys1, sys2:     MDTrajTrajectory Object
                     MDTraj trajectory to use for the system whose fitness
                     needs computing
-    residues:       list of lists of str
-                    Residues to consider when computing scores. Needs to have
-                    2 "dimensions" (nested list)
 
-                    [["ASP", "GLU"],["LYS","ARG],["VAL",ASP"]] means that
-                    the following contacts will be considered:
-                    ASP/LYS;ASP/ARG;ASP/VAL;ASP/ASP;
-                    GLU/LYS;GLU/ARG;GLU/VAL;GLU/ASP
-
-    score:          list of ints
-                    each list passed at the "residues" argument will be scored
-                    by the score with the same index, from this list, so the length
-                    of that argument needs to be the same as this one's
-    cutoff:         list of floats
-                    distance threshold to consider two particles as being "in contact".
-                    Given in nm.
-
+    scoreFunction:  list of ints
+                    Scoring Function provided by the user, to use in ranking the
+                    conformations
 
     Returns
     -------
@@ -41,7 +28,7 @@ def evaluateScore(sys1, sys2, residues, score, cutoff=0.7):
     Most of this script is taken from my old "ComputeFitness" script
 
     TODO: Add a check to see if the two systems either have the same number
-    of frames, or if either of them has 1 frame
+    TODO: of frames, or if either of them has 1 frame
     """
 
     # First we run some checks on the input
@@ -49,14 +36,7 @@ def evaluateScore(sys1, sys2, residues, score, cutoff=0.7):
             isinstance(sys2, md.core.trajectory.Trajectory)):
         raise TypeError("At least one of the inputs isn't an mdtraj trajectory object.")
 
-    if ((len(residues) != len(score)) or (len(score)!= len(cutoff))):
-       raise ValueError("Number of residue lists, scores and cutoffs need to be the same. "
-                        "You provided {}, {} and {}".format(len(residues), len(score), len(cutoff)))
-
-    ## It's easier to work with both systems brought into one
-    ## since MDTraj's distance computing library is "1000x faster
-    ## than the native numpy implementation". To do this, both
-    ## trajectories need to have the same number of frames
+    ## Concatenate
 
     if sys2.n_frames > sys1.n_frames:
         tempSys = sys1
@@ -68,14 +48,11 @@ def evaluateScore(sys1, sys2, residues, score, cutoff=0.7):
             sys2 = sys2.join(tempSys)
 
     fullSystem = sys1.stack(sys2)
-
     print (sys1.n_chains)
 
 
-    # Generate residues list
-    resList = []
-    for residue in fullSystem.topology.residues:
-        resList.append((str(residue)[:3]))
+
+
 
     # Compute contact score
     StartTime = datetime.datetime.now()
