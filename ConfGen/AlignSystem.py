@@ -16,15 +16,10 @@ def alignToAxis(system, NTermTop):
 
     Returns
     -------
-    alignedPos: numpy ndarray
+    newPositions: numpy ndarray
                 Array of shape (N,3) corresponding to the system aligned to
                 the Y axis
-    longAxis:   float
-                Length of long axis that makes up the ellipse that surrounds
-                the system
-    shortAxis:  float
-                Length of short axis that makes up the ellipse that surrounds
-                the system
+
     """
     ## Compute inertia tensor (inTens)
     inTens = md.compute_inertia_tensor(system)
