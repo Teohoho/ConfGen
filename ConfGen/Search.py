@@ -1,3 +1,4 @@
+import mdtraj
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 import warnings, sys
@@ -20,13 +21,13 @@ def SearchSurface(fixedSystem, mobileSystem, vdWoffset=0, theta=45, phi=45, delt
     """
     Parameters
     ----------
-    fixedSystem:    numpy.ndarray
-                    array, shape (N,3), containing the coordinates of the
-                    system we want to keep fixed, centered at (0,0,0)
 
-    mobileSystem:   numpy.ndarray
-                    array, shape (N,3), of the rotated positions
-                    of the two systems. in nm!
+    fixedSystem:    mdtraj Obj
+                    mdtraj Obj of the system we keep fixed, centered at (0,0,0)
+
+    mobileSystem:   mdtraj Obj
+                    mdtraj Obj of the system we intend to rotate
+
 
     vdWoffset:      float
                     how many nm to add to the offset, to account for
@@ -67,17 +68,18 @@ def SearchSurface(fixedSystem, mobileSystem, vdWoffset=0, theta=45, phi=45, delt
     in this module.
     """
 
-    conformations = np.zeros((0, mobileSystem.shape[0], 3))
+    conformations = np.zeros((0, mobileSystem.xyz[0].shape[0], 3))
+
     # Get the coordinates of the point farthest from the origin in the XZ plane for
     # both systems
-    atomDistances_FS = np.zeros((fixedSystem.shape[0]))
-    for atomIx in range(fixedSystem.shape[0]):
-        atomDistances_FS[atomIx] = np.linalg.norm(np.array(fixedSystem[atomIx][0],fixedSystem[atomIx][2]))
+    atomDistances_FS = np.zeros((fixedSystem.n_atoms))
+    for atomIx in range(fixedSystem.n_atoms):
+        atomDistances_FS[atomIx] = np.linalg.norm(np.array(fixedSystem.xyz[0][atomIx][0], fixedSystem.xyz[0][atomIx][2]))
     maxDist_FS = np.max(atomDistances_FS)
 
-    atomDistances_MS = np.zeros((mobileSystem.shape[0]))
-    for atomIx in range(mobileSystem.shape[0]):
-        atomDistances_MS[atomIx] = np.linalg.norm(np.array(mobileSystem[atomIx][0], mobileSystem[atomIx][2]))
+    atomDistances_MS = np.zeros((mobileSystem.n_atoms))
+    for atomIx in range(mobileSystem.n_atoms):
+        atomDistances_MS[atomIx] = np.linalg.norm(np.array(mobileSystem.xyz[0][atomIx][0], mobileSystem.xyz[0][atomIx][2]))
     maxDist_MS = np.max(atomDistances_MS)
     offset = maxDist_FS + maxDist_MS + vdWoffset
 
@@ -99,13 +101,18 @@ def SearchSurface(fixedSystem, mobileSystem, vdWoffset=0, theta=45, phi=45, delt
     print ("theta Iterations: {}".format(thetaIterations))
     print ("phi Iterations: {}".format(phiIterations))
     print ("delta Iterations: {}".format((2*ndelta)+1))
+    print ("total Iterations: {}".format(thetaIterations*phiIterations*((2*ndelta)+1)))
 
     # Display warning if theta/phi are not divisors of 360
     if (360 % theta != 0 or 360 % phi != 0):
         warnings.warn("The theta/phi values are not divisors of 360!")
 
+    centerOfRotation = mdtraj.compute_center_of_mass(fixedSystem,
+                                                     select="chainid {}".format(fixedSystem.n_chains-1))[0]
+    print(centerOfRotation)
+
     # It's easier to compute the Phi rotation now, then translate
-    startPose = mobileSystem
+    startPose = mobileSystem.xyz[0]
     phi_vector = R.from_rotvec(np.radians(phi) * np.array([0, 1, 0]))
     for phiIx in range(phiIterations):
         sys2 = startPose
@@ -114,7 +121,7 @@ def SearchSurface(fixedSystem, mobileSystem, vdWoffset=0, theta=45, phi=45, delt
 
         # Translate along the X axis
         #print ("sys2: {}".format(sys2))
-        sys2 = sys2 + (np.array([1, 0, 0]) * offset)
+        sys2 = sys2 + centerOfRotation + [offset, 0, offset]
         #print ("sys2: {}".format(sys2))
         #print ("sys2_CM: {}".format(centroidPoints(sys2)))
 
@@ -123,11 +130,7 @@ def SearchSurface(fixedSystem, mobileSystem, vdWoffset=0, theta=45, phi=45, delt
             sys3 = sys2
             sys3 = sys3 + (np.array([0, 1, 0]) * i * delta)
 
-            # Define a center point which we move in an elliptical orbit. We don't
-            # move the entire protein to avoid the skewing that comes with an
-            # elliptical motion
-            centralPoint = np.array([1, 0, 0]) * offset
-            #print (centralPoint)
+
 
             for thetaIx in range(thetaIterations):
                 # Define the circular TM
@@ -136,18 +139,18 @@ def SearchSurface(fixedSystem, mobileSystem, vdWoffset=0, theta=45, phi=45, delt
                 #print ("sin theta: {}".format(np.sin(theta * thetaIx)))
                 #print ("cos theta: {}".format(np.cos(theta * thetaIx)))
                 circularTM = circularOrbit(np.radians(theta * thetaIx))
-                movedPoint = np.matmul(circularTM, centralPoint)
+                movedPoint = np.matmul(circularTM, centerOfRotation)
                 #print (movedPoint)
                 for atomIx in range(sys3.shape[0]):
-                    sys4[atomIx] = sys3[atomIx] + movedPoint - centralPoint
+                    sys4[atomIx] = sys3[atomIx] + movedPoint
 
                 # In order to better approximate the surface of the fixed system, we
                 # bring the mobile system closer to the origin by a distance equal to the minimum
                 # distance between the two helices minus the vdWoffset
                 distMin = 9999
-                for FS_AtomIX in range(fixedSystem.shape[0]):
-                    for MS_AtomIX in range(mobileSystem.shape[0]):
-                        distFS_MS = np.linalg.norm(fixedSystem[FS_AtomIX] - sys4[MS_AtomIX])
+                for FS_AtomIX in range(fixedSystem.n_atoms):
+                    for MS_AtomIX in range(mobileSystem.n_atoms):
+                        distFS_MS = np.linalg.norm(fixedSystem.xyz[0][FS_AtomIX] - sys4[MS_AtomIX])
                         if (distFS_MS < distMin):
                             distMin = distFS_MS
                 print("Dist min: {}".format(distMin))
@@ -155,8 +158,8 @@ def SearchSurface(fixedSystem, mobileSystem, vdWoffset=0, theta=45, phi=45, delt
                 angle = np.radians(theta * thetaIx)
                 sys4 = sys4 - [distMin*np.cos(angle),0,distMin*np.sin(angle)]
 
-
                 conformations = np.concatenate((conformations, np.array(sys4, ndmin=3)))
-    print ("Conformations.shape: {}".format(conformations.shape))
+    print (conformations)
+    print ("len(Conformations): {}".format(len(conformations)))
     print("{0} DEBUG INFO END {0}\n".format(18 * "#"))
     return (conformations)
