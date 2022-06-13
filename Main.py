@@ -19,7 +19,6 @@ def knobsIntoHolesScore(Sys1,Sys2):
 def hydrophobicScore(Sys1,Sys2):
 
     score = 0
-
     #maxASA as determined by Tien et al. 2013 (doi:10.1371/journal.pone.0080635)
     maxASA = {"A":129, "C":167, "D": 193, "E": 223, "F":240,
               "G":104, "H":224, "I":197, "K": 236, "L":201, "M":224,
@@ -60,7 +59,8 @@ class Main:
         for TM in range(len(TMResIDs)):
             helices.append([self.ShortToLong[x] for x in seq[TMResIDs[TM][0]:TMResIDs[TM][1]+1]])
         print (helices)
-        leapFile = "/home/teo/2022/ConfGen/test_site/tempLEaP.in"
+        #leapFile = "/home/teo/2022/ConfGen/test_site/tempLEaP.in"
+        leapFile = "D:/Munca/2022/ConfGen/test_site/tempLEaP.in"
         with open(leapFile, 'w') as f:
             f.write("source leaprc.protein.ff19SB\n")
             for TM in range(len(helices)):
@@ -112,25 +112,27 @@ class Main:
             print("fixedSys: {}".format(fixedSys))
             print("mobileSys: {}".format(self.systems[mobileIx]))
             currentSearch = ConfGen.Search.SearchSurface(fixedSystem=fixedSys,
-                                                         mobileSystem=self.systems[mobileIx], vdWoffset=0.5,
-                                                         theta=180, phi=180, ndelta=0)
+                                                         mobileSystem=self.systems[mobileIx], vdWoffset=2,
+                                                         theta=30, phi=30, ndelta=0)
 
-            outputFN = "/home/teo/2022/ConfGen/test_site/Output"
-            ConfGen.TrajWriter.writeTraj(currentSearch, out_FN="{}/fullSearch_{}.dcd".format(outputFN,mobileIx))
+            outputFN = "D:/Munca/2022/ConfGen/newOutput"
+            #ConfGen.TrajWriter.writeTraj(currentSearch, out_FN="{}/fullSearch_{}.dcd".format(outputFN,mobileIx))
+            currentSearch.save_dcd("{}/fullSearch_{}.dcd".format(outputFN,mobileIx))
 
             Scores = []
 
-            for FrameIx in range(currentSearch.shape[0]):
-                self.systems[mobileIx].xyz[0] = currentSearch[FrameIx]
-                Scores.append(self.EvaluateScore(scoreFunc, fixedSys, self.systems[mobileIx]))
+            for FrameIx in range(currentSearch.n_frames):
+                #self.systems[mobileIx].xyz[0] = currentSearch[FrameIx]
+                Scores.append(self.EvaluateScore(scoreFunc, fixedSys, currentSearch[FrameIx]))
             print(Scores)
             bestSysIx = np.argmin(Scores)
-            self.systems[mobileIx].xyz[0] = currentSearch[bestSysIx]
+            self.systems[mobileIx] = currentSearch[bestSysIx]
             print ("{}: {}".format(np.min(Scores), bestSysIx))
 
             fixedSys = fixedSys.stack(self.systems[mobileIx])
             fixedSys.save("{}/FixedSys_{}.pdb".format(outputFN, mobileIx))
-            fixedSys.xyz[0] = fixedSys.xyz[0] - np.average(fixedSys.xyz[0], axis=0)
+            centerChain = fixedSys.topology.select("chainid {}".format(fixedSys.n_chains-1))
+            fixedSys.xyz[0] = fixedSys.xyz[0] - np.average(fixedSys.xyz[0][centerChain[0]+1:centerChain[-1]], axis=0)
             fixedSys.save("{}/FixedSys_Centered_{}.pdb".format(outputFN, mobileIx))
 
 
@@ -139,12 +141,13 @@ class Main:
 
 ## Example, substitute your own files ##
 A_Obj = Main()
-systemsIn = A_Obj.Gen3D(seq="KKKKKKKKKIKKKKKKKKKGGGGKKKKKKKKKIKKKKKKKKKGGGGKKKKKKKKKIKKKKKKKKK", TMResIDs=[[0,18],[23,41],[46,64] ], tempDir="/home/teo/2022/ConfGen/test_site")
+#systemsIn = A_Obj.Gen3D(seq="KKKKKKKKKIKKKKKKKKKGGGGKKKKKKKKKIKKKKKKKKKGGGGKKKKKKKKKIKKKKKKKKK", TMResIDs=[[0,18],[23,41],[46,64] ], tempDir="/home/teo/2022/ConfGen/test_site")
+#systemsIn = A_Obj.Gen3D(seq="KKKKKKKKKIKKKKKKKKKGGGGKKKKKKKKKIKKKKKKKKKGGGGKKKKKKKKKIKKKKKKKKK", TMResIDs=[[0,18],[23,41],[46,64] ], tempDir="D:/Munca/2022/ConfGen/test_site")
 
-print (systemsIn)
+#print (systemsIn)
 
 A_Obj.Input(
-            systemsIn[0:2]
+            #systemsIn[0:2]
              #[["/home/teo/2022/ConfGen/test_site/testSystem/2MTS.pdb", "/home/teo/2022/ConfGen/test_site/testSystem/2MTS.pdb"],
              #["/home/teo/2022/ConfGen/test_site/testSystem/h3s.prmtop", "/home/teo/2022/ConfGen/test_site/testSystem/h3s_min.inpcrd"],
              #["/home/teo/2022/ConfGen/test_site/testSystem/h3s.prmtop", "/home/teo/2022/ConfGen/test_site/testSystem/h3s_min.inpcrd"],
@@ -152,7 +155,12 @@ A_Obj.Input(
              #["/home/teo/2022/ConfGen/test_site/testSystem/h3s.prmtop", "/home/teo/2022/ConfGen/test_site/testSystem/h3s_min.inpcrd"],
              #["/home/teo/2022/ConfGen/test_site/testSystem/h3s.prmtop", "/home/teo/2022/ConfGen/test_site/testSystem/h3s_min.inpcrd"],
              #["/home/teo/2022/ConfGen/test_site/testSystem/h3s.prmtop", "/home/teo/2022/ConfGen/test_site/testSystem/h3s_min.inpcrd"]]
-            )
+            [["D:/Munca/2022/ConfGen/test_site/TM0.pdb", "D:/Munca/2022/ConfGen/test_site/TM0.pdb"],
+            ["D:/Munca/2022/ConfGen/test_site/TM0.pdb", "D:/Munca/2022/ConfGen/test_site/TM0.pdb"],
+            ["D:/Munca/2022/ConfGen/test_site/TM0.pdb", "D:/Munca/2022/ConfGen/test_site/TM0.pdb"],
+            ["D:/Munca/2022/ConfGen/test_site/TM0.pdb", "D:/Munca/2022/ConfGen/test_site/TM0.pdb"],
+            ["D:/Munca/2022/ConfGen/test_site/TM0.pdb", "D:/Munca/2022/ConfGen/test_site/TM0.pdb"]
+            ])
 
 #outputFN = "/home/teo/2022/ConfGen/test_site/Output"
 #A_Obj.generateTopology(outputFN="{}/fullSystemTest.pdb".format(outputFN))
