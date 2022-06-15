@@ -17,7 +17,7 @@ def circularOrbit(theta):
 
     return (CTM)
 
-def SearchSurface(fixedSystem, mobileSystem, vdWoffset=0, theta=45, phi=45, delta=0.27, ndelta=0):
+def SearchSurface(fixedSystem, mobileSystem, offset=0, theta=45, phi=45, delta=0.27, ndelta=0):
     """
     Parameters
     ----------
@@ -29,7 +29,7 @@ def SearchSurface(fixedSystem, mobileSystem, vdWoffset=0, theta=45, phi=45, delt
                     mdtraj Obj of the system we intend to rotate
 
 
-    vdWoffset:      float
+    offset:      float
                     how many nm to add to the offset, to account for
                     vdW interactions between the systems.
 
@@ -49,7 +49,7 @@ def SearchSurface(fixedSystem, mobileSystem, vdWoffset=0, theta=45, phi=45, delt
 
     Returns
     -------
-    conformations:  numpy.ndarray
+    conformations:  MDTraj.Trajectory
                     array of dimensions (M,N,3), where:
                     *)   M is the number of conformations found, which should be equal to
                     (360/theta + 360/phi + ndelta + 1)
@@ -73,18 +73,27 @@ def SearchSurface(fixedSystem, mobileSystem, vdWoffset=0, theta=45, phi=45, delt
 
     # Get the coordinates of the point farthest from the origin in the XZ plane for
     # both systems
-    atomDistances_FS = np.zeros((fixedSystem.n_atoms))
-    for atomIx in range(fixedSystem.n_atoms):
-        atomDistances_FS[atomIx] = np.linalg.norm(np.array(fixedSystem.xyz[0][atomIx][0], fixedSystem.xyz[0][atomIx][2]))
+    centerChain = fixedSystem.topology.select("chainid {}".format(fixedSystem.n_chains-1))
+    #print ("chainid {}".format(fixedSystem.n_chains-1))
+    atomDistances_FS = []
+    for atomIx in (centerChain):
+        #print (atomIx)
+        #print (np.array([fixedSystem.xyz[0][atomIx][0], fixedSystem.xyz[0][atomIx][2]]))
+        atomDistances_FS.append(np.linalg.norm(np.array([fixedSystem.xyz[0][atomIx][0], fixedSystem.xyz[0][atomIx][2]])))
+        #print (fixedSystem.topology.atom(atomIx))
+        #print(np.linalg.norm(fixedSystem.xyz[0][atomIx]))
     maxDist_FS = np.max(atomDistances_FS)
+    print ("maxDist_FS = {}".format(maxDist_FS))
 
     atomDistances_MS = np.zeros((mobileSystem.n_atoms))
     for atomIx in range(mobileSystem.n_atoms):
-        atomDistances_MS[atomIx] = np.linalg.norm(np.array(mobileSystem.xyz[0][atomIx][0], mobileSystem.xyz[0][atomIx][2]))
+        atomDistances_MS[atomIx] = np.linalg.norm(np.array([mobileSystem.xyz[0][atomIx][0], mobileSystem.xyz[0][atomIx][2]]))
     maxDist_MS = np.max(atomDistances_MS)
-    #print ("MaxDist_FS + MaxDist+MS = {}".format(maxDist_FS+maxDist_MS))
+    print ("maxDist_MS = {}".format(maxDist_MS))
+
+    #print ("MaxDist_FS + MaxDist_MS + offset = {}".format(maxDist_FS + maxDist_MS + offset))
     #offset = maxDist_FS + maxDist_MS + vdWoffset
-    offset = vdWoffset
+    #offset = vdWoffset
 
 
     print("\n{0} DEBUG INFO {0}".format(20 * "#"))
@@ -114,9 +123,9 @@ def SearchSurface(fixedSystem, mobileSystem, vdWoffset=0, theta=45, phi=45, delt
 
     #print ("chainid {}".format(fixedSystem.n_chains-1))
     #print ("chainid {}".format(fixedSystem.n_chains-1))
-    centerOfRotation = mdtraj.compute_center_of_mass(fixedSystem,
-                                                     select="chainid {}".format(fixedSystem.n_chains-1))[0]
-    print(centerOfRotation)
+    #centerOfRotation = mdtraj.compute_center_of_mass(fixedSystem,
+    #                                                 select="chainid {}".format(fixedSystem.n_chains-1))[0]
+    #print(centerOfRotation)
 
     # It's easier to compute the Phi rotation now, then translate
     startPose = mobileSystem.xyz[0]
@@ -131,7 +140,9 @@ def SearchSurface(fixedSystem, mobileSystem, vdWoffset=0, theta=45, phi=45, delt
         #print ("sys2: {}".format(sys2))
         #print ("Offset: {}".format(offset))
         #sys2 = sys2 + centerOfRotation + [offset, 0, 0]
-        sys2 = sys2 + [offset, 0, 0]
+        sys2 = sys2 + [maxDist_MS + maxDist_FS + offset, 0, 0]
+        #sys2 = sys2 + [offset, 0, 0]
+        #print ("translated by: {}".format(maxDist_MS + maxDist_FS + offset))
         #print ("sys2: {}".format(sys2))
         #print ("sys2_CM: {}".format(centroidPoints(sys2)))
 
@@ -163,14 +174,37 @@ def SearchSurface(fixedSystem, mobileSystem, vdWoffset=0, theta=45, phi=45, delt
                 #for FS_AtomIX in range(fixedSystem.n_atoms):
                     #for MS_AtomIX in range(mobileSystem.n_atoms):
                 #distFS_MS = np.linalg.norm(centroidPoints(fixedSystem.xyz[0]) - centroidPoints(sys4))
-                distFS_MS = np.linalg.norm([0,0,0] - centroidPoints(sys4))
+                #distFS_MS = np.linalg.norm([0,0,0] - centroidPoints(sys4))
                     #if (distFS_MS < distMin):
                         #distMin = distFS_MS
-                distMin = distFS_MS
-                print("Dist min: {}".format(distMin))
-                distMin = distMin - vdWoffset
-                angle = np.radians(theta * thetaIx)
-                sys4 = sys4 - [distMin*np.cos(angle),0,distMin*np.sin(angle)]
+                #distMin = distFS_MS
+                ## distMin = 0
+                ## tempList = []
+                ## for MS_AtomIX in range(len(sys4)):
+                ##     tempList.append(np.linalg.norm([sys4[MS_AtomIX][0],
+                ##                                     sys4[MS_AtomIX][2]]))
+                ## tempList = np.array(tempList)
+                ## pointC = sys4[np.argmin(tempList)]
+                ## #print (np.argmin(tempList), pointC, np.min(tempList))
+                ## distMin = distMin + np.min(tempList)
+                ## #print("Dist min: {}".format(distMin))
+                ## tempList = []
+                ## #for FS_AtomIX in range(fixedSystem.n_atoms):
+                ## for atomIx in centerChain:
+                ##     #print ("atomIx centerChain: {}".format(atomIx))
+                ##     tempList.append(np.linalg.norm([pointC[0] - fixedSystem.xyz[0][atomIx][0],
+                ##                                     pointC[2] - fixedSystem.xyz[0][atomIx][2]]))
+                ## tempList = np.array(tempList)
+                ## pointD = fixedSystem.xyz[0][np.argmin(tempList)+centerChain[0]]
+                ## #print(np.argmin(tempList), pointD, np.min(tempList))
+                ## #print (np.argmin(tempList)+centerChain[0], pointD, np.min(tempList))
+                ## #print ("pointD: {}".format(np.linalg.norm(pointD)))
+                ## #print ("Dist min - point d: {}".format(distMin - np.linalg.norm(pointD)))
+                ## distMin = distMin - np.linalg.norm([pointD[0],pointD[2]])
+                ## distMin = distMin - offset
+                ## #print ("DistMin - offset: {}".format(distMin))
+                ## angle = np.radians(theta * thetaIx)
+                ## sys4 = sys4 - [distMin*np.cos(angle), 0, distMin*np.sin(angle)]
 
                 # Need to check if the mobile helix collides with any part of
                 # the fixed helices. If yes, discard that conformation. If not,
@@ -180,9 +214,13 @@ def SearchSurface(fixedSystem, mobileSystem, vdWoffset=0, theta=45, phi=45, delt
                     centerChain = fixedSystem.topology.select("chainid {}".format(chainIx))
                     #print (centerChain)
                     #print (centerChain[0], centerChain[-1])
-                    distFS_MS = np.linalg.norm(centroidPoints(fixedSystem.xyz[0][centerChain[0]+1:centerChain[-1]]) - centroidPoints(sys4))
+                    #for FS_AtomIX in range(fixedSystem.n_atoms):
+                    #    for MS_AtomIX in range(mobileSystem.n_atoms):
+                    #        distFS_MS = np.linalg.norm(fixedSystem.xyz[0][FS_AtomIX] - sys4[MS_AtomIX])
+                    distFS_MS = np.linalg.norm(centroidPoints(fixedSystem.xyz[0][centerChain[0] + 1:centerChain[-1]]) - centroidPoints(sys4))
                     #print ("{} - {} = {}".format(centroidPoints(fixedSystem.xyz[0]), centroidPoints(sys4), distFS_MS))
-                    if (distFS_MS < 1.6):
+                    if (distFS_MS < 0.5):
+                    #    pass
                         collision = 1
                         break
 
