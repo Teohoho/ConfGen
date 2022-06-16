@@ -108,30 +108,16 @@ def SearchSurface(fixedSystem, mobileSystem, offset=0, theta=45, phi=45, delta=0
     if (360 % theta != 0 or 360 % phi != 0):
         warnings.warn("The theta/phi values are not divisors of 360!")
 
-    #print ("chainid {}".format(fixedSystem.n_chains-1))
-    #print ("chainid {}".format(fixedSystem.n_chains-1))
-    #centerOfRotation = mdtraj.compute_center_of_mass(fixedSystem,
-    #                                                 select="chainid {}".format(fixedSystem.n_chains-1))[0]
-    #print(centerOfRotation)
-
     # It's easier to compute the Phi rotation now, then translate
     startPose = mobileSystem.xyz[0]
     phi_vector = R.from_rotvec(np.radians(phi) * np.array([0, 1, 0]))
     for phiIx in range(phiIterations):
         sys2 = startPose
-        #print (sys2)
         for rotIx in range(phiIx):
             sys2 = np.array(phi_vector.apply(sys2))
 
         # Translate along the X axis
-        #print ("sys2: {}".format(sys2))
-        #print ("Offset: {}".format(offset))
-        #sys2 = sys2 + centerOfRotation + [offset, 0, 0]
         sys2 = sys2 + [maxDist_MS + maxDist_FS + offset, 0, 0]
-        #sys2 = sys2 + [offset, 0, 0]
-        #print ("translated by: {}".format(maxDist_MS + maxDist_FS + offset))
-        #print ("sys2: {}".format(sys2))
-        #print ("sys2_CM: {}".format(centroidPoints(sys2)))
 
         # Translate by delta
         for i in range(-ndelta, ndelta + 1):
@@ -139,32 +125,17 @@ def SearchSurface(fixedSystem, mobileSystem, offset=0, theta=45, phi=45, delta=0
             sys3 = sys3 + (np.array([0, 1, 0]) * i * delta)
 
 
-
+            # Rotate by theta
             for thetaIx in range(thetaIterations):
-                # Define the circular TM
                 sys4 = np.zeros(sys3.shape)
-                #print ("theta * thetaIx: {}".format(theta * thetaIx))
-                #print ("sin theta: {}".format(np.sin(theta * thetaIx)))
-                #print ("cos theta: {}".format(np.cos(theta * thetaIx)))
+                # Define the circular TM
                 circularTM = circularOrbit(np.radians(theta * thetaIx))
-                #print (circularTM)
-                #movedPoint = np.matmul(circularTM, [0,0,0])
-                #print (movedPoint)
                 for atomIx in range(sys3.shape[0]):
                     sys4[atomIx] = np.matmul(circularTM, sys3[atomIx])
-                #print (sys4)
 
                 # In order to better approximate the surface of the fixed system, we
                 # bring the mobile system closer to the origin by a distance equal to the minimum
-                # distance between the two helices minus the vdWoffset
-                #distMin = 99
-                #for FS_AtomIX in range(fixedSystem.n_atoms):
-                #    for MS_AtomIX in range(mobileSystem.n_atoms):
-                #distFS_MS = np.linalg.norm(centroidPoints(fixedSystem.xyz[0]) - centroidPoints(sys4))
-                #distFS_MS = np.linalg.norm([0,0,0] - centroidPoints(sys4))
-                    #if (distFS_MS < distMin):
-                        #distMin = distFS_MS
-                #distMin = distFS_MS
+                # distance between the two helices minus the offset
                 distMin = 0
                 tempVar = 99
                 for MS_AtomIX in range(len(sys4)):
@@ -173,18 +144,12 @@ def SearchSurface(fixedSystem, mobileSystem, offset=0, theta=45, phi=45, delta=0
                     if (tempVar > tempVar2):
                         tempVar = tempVar2
                         closeAtom = MS_AtomIX
-                        #print ("tempVar = {}".format(tempVar))
-                        #print ("closeAtom = {}".format(closeAtom))
 
-                print (closeAtom)
+                #print (closeAtom)
                 pointC = sys4[closeAtom]
-                #print (np.argmin(tempList), pointC, np.min(tempList))
                 distMin = distMin + tempVar
-                print("Dist min: {}".format(distMin))
-                #for FS_AtomIX in range(fixedSystem.n_atoms):
-                #print (centerChain)
+
                 for atomIx in centerChain:
-                    #print (atomIx)
                     tempVar2 = np.linalg.norm([pointC[0] - fixedSystem.xyz[0][atomIx][0],
                                                 pointC[2] - fixedSystem.xyz[0][atomIx][2]])
                     if (tempVar > tempVar2):
@@ -192,14 +157,8 @@ def SearchSurface(fixedSystem, mobileSystem, offset=0, theta=45, phi=45, delta=0
 
                 pointD = np.linalg.norm(np.array(fixedSystem.xyz[0][closeAtom][0],
                                                  fixedSystem.xyz[0][closeAtom][2]))
-                print (closeAtom)
-                #print(np.argmin(tempList), pointD, np.min(tempList))
-                #print (np.argmin(tempList)+centerChain[0], pointD, np.min(tempList))
-                #print ("pointD: {}".format(np.linalg.norm(pointD)))
-                distMin = distMin - np.linalg.norm(pointD)
-                print ("Dist min - point d: {}".format(distMin))
-                distMin = distMin - offset
-                print ("DistMin - offset: {}".format(distMin))
+
+                distMin = distMin - np.linalg.norm(pointD) - offset
                 angle = np.radians(theta * thetaIx)
                 sys4 = sys4 - [distMin*np.cos(angle), 0, distMin*np.sin(angle)]
 
@@ -210,15 +169,8 @@ def SearchSurface(fixedSystem, mobileSystem, offset=0, theta=45, phi=45, delta=0
                 for chainIx in range(fixedSystem.n_chains):
 
                     centerChain2 = fixedSystem.topology.select("chainid {}".format(chainIx))
-                    #print (centerChain)
-                    #print (centerChain[0], centerChain[-1])
-                    #for FS_AtomIX in range(fixedSystem.n_atoms):
-                    #    for MS_AtomIX in range(mobileSystem.n_atoms):
-                    #        distFS_MS = np.linalg.norm(fixedSystem.xyz[0][FS_AtomIX] - sys4[MS_AtomIX])
                     distFS_MS = np.linalg.norm(centroidPoints(fixedSystem.xyz[0][centerChain2[0] + 1:centerChain2[-1]]) - centroidPoints(sys4))
-                    #print ("{} - {} = {}".format(centroidPoints(fixedSystem.xyz[0]), centroidPoints(sys4), distFS_MS))
                     if (distFS_MS < 0.5):
-                    #    pass
                         collision = 1
                         break
 
@@ -227,7 +179,4 @@ def SearchSurface(fixedSystem, mobileSystem, offset=0, theta=45, phi=45, delta=0
                     conformations = conformations.join(tempSys)
 
     conformations = conformations[1:]
-    #print (conformations)
-    print ("Conformations: {}".format(conformations))
-    print("{0} DEBUG INFO END {0}\n".format(18 * "#"))
     return (conformations)

@@ -7,18 +7,18 @@ def alignToAxis(system, NTermTop):
     """
     Parameters
     ----------
-    system:  MDTrajTrajectory Object
-            Trajectory objects of the system to be aligned
+    system:         mdtraj.Trajectory
+                    Trajectory objects of the system to be aligned
 
-    NTermTop:  string
-            Where the N-Terminus should be oriented, towards
-            +Y (positive) or towards -Y (negative)
+    NTermTop:       string
+                    Where the N-Terminus should be oriented, towards
+                    +Y (positive) or towards -Y (negative)
 
     Returns
     -------
-    newPositions: numpy ndarray
-                Array of shape (N,3) corresponding to the system aligned to
-                the Y axis
+    newPositions:   numpy ndarray
+                    Array of shape (N,3) corresponding to the system aligned to
+                    the Y axis
 
     """
     ## Compute inertia tensor (inTens)
@@ -38,7 +38,6 @@ def alignToAxis(system, NTermTop):
     ## To account for the topology of the system, we need to orient
     ## the helices so the C-terminal of helix N and the N-terminal
     ## of helix N+1 are on the same side of the XZ plane
-    ## Get the location of the N-Term
     NTerm = newPositions[0][0]
     if (NTerm < 0):
         if (NTermTop.lower() == "negative"):

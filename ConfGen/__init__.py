@@ -1,4 +1,4 @@
-from . import Search, TrajWriter, AlignSystem, Scoring
+from . import Search, AlignSystem
 
 #TODO: ADD A GENERALIZED WAY TO ALIGN A SYSTEM CONSISTING OF AN INFINITE AMMOUNT OF HELICES. (done)
 
