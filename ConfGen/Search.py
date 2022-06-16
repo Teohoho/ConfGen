@@ -22,86 +22,73 @@ def SearchSurface(fixedSystem, mobileSystem, offset=0, theta=45, phi=45, delta=0
     Parameters
     ----------
 
-    fixedSystem:    mdtraj Obj
-                    mdtraj Obj of the system we keep fixed, centered at (0,0,0)
+    fixedSystem:    mdtraj.Trajectory
+                    MDTraj Object of the system we keep fixed
 
-    mobileSystem:   mdtraj Obj
-                    mdtraj Obj of the system we intend to rotate
+    mobileSystem:   mdtraj.Trajectory
+                    MDTraj Object of the system we intend to rotate
 
-
-    offset:      float
-                    how many nm to add to the offset, to account for
-                    vdW interactions between the systems.
+    offset:         float
+                    value by which we offset the mobileSystem, relative to
+                    fixedSystem
 
     theta:          float
                     increment by which to increase the rotation of
-                    sys2 relative to the origin, in degrees
+                    mobileSystem relative to the origin, in degrees
 
     phi:            float
                     increment by which to increase the rotation of
-                    sys2 relative to itself, in degrees
+                    mobileSystem relative to itself, in degrees
+
     delta:          float
-                    increment by which to translate sys2 relative
-                    to the origin
+                    increment by which to translate mobileSystem relative
+                    to the origin, on the Y axis
+
     ndelta          int
-                    how many times to translate sys2 by +/- delta
-                    relative to the origin
+                    how many times to translate mobileSystem by +/- delta
+                    relative to the origin, on the Y axis
 
     Returns
     -------
-    conformations:  MDTraj.Trajectory
-                    array of dimensions (M,N,3), where:
-                    *)   M is the number of conformations found, which should be equal to
-                    (360/theta + 360/phi + ndelta + 1)
-                    *)   N is the number of particles in the system
-                    *)   3 is the integer that comes after 2, but before 4.
+    conformations:  mdtraj.Trajectory
+                    MDTraj Object where each frame is a found conformation
+
 
     Notes
     -----
-    By default, we initially increment along the z axis, then translate
-    along the Y axis (by delta), then we rotate in the XZ plane
-    (by both theta and phi). Afterwards we bring the mobile system
-    closer to the origin so the contacts made between the two systems are tight.
+    The mobileSystem is rotated around the origin by a phi, effectively rotating it
+    around its own axis, since mobileSystem is centered in [0,0,0]
 
-    This class works on the assumption that the system was previously centered in
-    the (0,0,0) coordinate. This can be done via the AlignSystem class, found
-    in this module.
+    The mobileSystem is then translated along the X axis by the sum of the largest
+    position vectors of the two systems (only counting the last chain in FixedSystem,
+    since that's the one we rotate around) plus a user-defined offset.
+
+    The mobileSystem is then translated on the Y axis by delta,
+
+    This class works if the helix around which you want to rotate is centered in
+    [0,0,0]
     """
 
     conformations = mobileSystem[0]
     tempSys = mobileSystem[0]
 
     # Get the coordinates of the point farthest from the origin in the XZ plane for
-    # both systems
+    # both systems, so we can use those vectors to compute initial translation on X axis
     centerChain = fixedSystem.topology.select("chainid {}".format(fixedSystem.n_chains-1))
-    #print ("chainid {}".format(fixedSystem.n_chains-1))
+
     atomDistances_FS = []
-    for atomIx in (centerChain):
-        #print (atomIx)
-        #print (np.array([fixedSystem.xyz[0][atomIx][0], fixedSystem.xyz[0][atomIx][2]]))
-        atomDistances_FS.append(np.linalg.norm(np.array([fixedSystem.xyz[0][atomIx][0], fixedSystem.xyz[0][atomIx][2]])))
-        #print (fixedSystem.topology.atom(atomIx))
-        #print(np.linalg.norm(fixedSystem.xyz[0][atomIx]))
+    for atomIx in centerChain:
+        atomDistances_FS.append(np.linalg.norm(np.array([fixedSystem.xyz[0][atomIx][0],
+                                                         fixedSystem.xyz[0][atomIx][2]])))
     maxDist_FS = np.max(atomDistances_FS)
-    print ("maxDist_FS = {}".format(maxDist_FS))
 
-    atomDistances_MS = np.zeros((mobileSystem.n_atoms))
+    atomDistances_MS = []
     for atomIx in range(mobileSystem.n_atoms):
-        atomDistances_MS[atomIx] = np.linalg.norm(np.array([mobileSystem.xyz[0][atomIx][0], mobileSystem.xyz[0][atomIx][2]]))
+        atomDistances_MS.append(np.linalg.norm(np.array([mobileSystem.xyz[0][atomIx][0],
+                                                         mobileSystem.xyz[0][atomIx][2]])))
     maxDist_MS = np.max(atomDistances_MS)
-    print ("maxDist_MS = {}".format(maxDist_MS))
-
-    #print ("MaxDist_FS + MaxDist_MS + offset = {}".format(maxDist_FS + maxDist_MS + offset))
-    #offset = maxDist_FS + maxDist_MS + vdWoffset
-    #offset = vdWoffset
 
 
-    print("\n{0} DEBUG INFO {0}".format(20 * "#"))
-    #print (offset)
-    #print("Farthest atom FS {}: {}nm".format(atomFar,maxDist_FS))
-    #print("Farthest atom MS {}: {}nm".format(atomFar,maxDist_MS))
-    #print("maxDist_FS + maxDist_MS: {}".format(maxDist_FS + maxDist_MS))
-    #print("maxDist_FS + maxDist_MS + vdWoffset: {}".format(offset))
 
     # Set up number of rotations
     if (theta == 0):
@@ -109,8 +96,8 @@ def SearchSurface(fixedSystem, mobileSystem, offset=0, theta=45, phi=45, delta=0
     if (phi == 0):
         phi = 360
 
-    thetaIterations = np.int(360 / theta)
-    phiIterations = np.int(360 / phi)
+    thetaIterations = np.int(360/theta)
+    phiIterations = np.int(360/phi)
 
     print ("theta Iterations: {}".format(thetaIterations))
     print ("phi Iterations: {}".format(phiIterations))
@@ -172,52 +159,63 @@ def SearchSurface(fixedSystem, mobileSystem, offset=0, theta=45, phi=45, delta=0
                 # distance between the two helices minus the vdWoffset
                 #distMin = 99
                 #for FS_AtomIX in range(fixedSystem.n_atoms):
-                    #for MS_AtomIX in range(mobileSystem.n_atoms):
+                #    for MS_AtomIX in range(mobileSystem.n_atoms):
                 #distFS_MS = np.linalg.norm(centroidPoints(fixedSystem.xyz[0]) - centroidPoints(sys4))
                 #distFS_MS = np.linalg.norm([0,0,0] - centroidPoints(sys4))
                     #if (distFS_MS < distMin):
                         #distMin = distFS_MS
                 #distMin = distFS_MS
-                ## distMin = 0
-                ## tempList = []
-                ## for MS_AtomIX in range(len(sys4)):
-                ##     tempList.append(np.linalg.norm([sys4[MS_AtomIX][0],
-                ##                                     sys4[MS_AtomIX][2]]))
-                ## tempList = np.array(tempList)
-                ## pointC = sys4[np.argmin(tempList)]
-                ## #print (np.argmin(tempList), pointC, np.min(tempList))
-                ## distMin = distMin + np.min(tempList)
-                ## #print("Dist min: {}".format(distMin))
-                ## tempList = []
-                ## #for FS_AtomIX in range(fixedSystem.n_atoms):
-                ## for atomIx in centerChain:
-                ##     #print ("atomIx centerChain: {}".format(atomIx))
-                ##     tempList.append(np.linalg.norm([pointC[0] - fixedSystem.xyz[0][atomIx][0],
-                ##                                     pointC[2] - fixedSystem.xyz[0][atomIx][2]]))
-                ## tempList = np.array(tempList)
-                ## pointD = fixedSystem.xyz[0][np.argmin(tempList)+centerChain[0]]
-                ## #print(np.argmin(tempList), pointD, np.min(tempList))
-                ## #print (np.argmin(tempList)+centerChain[0], pointD, np.min(tempList))
-                ## #print ("pointD: {}".format(np.linalg.norm(pointD)))
-                ## #print ("Dist min - point d: {}".format(distMin - np.linalg.norm(pointD)))
-                ## distMin = distMin - np.linalg.norm([pointD[0],pointD[2]])
-                ## distMin = distMin - offset
-                ## #print ("DistMin - offset: {}".format(distMin))
-                ## angle = np.radians(theta * thetaIx)
-                ## sys4 = sys4 - [distMin*np.cos(angle), 0, distMin*np.sin(angle)]
+                distMin = 0
+                tempVar = 99
+                for MS_AtomIX in range(len(sys4)):
+                    tempVar2 = (np.linalg.norm([sys4[MS_AtomIX][0],
+                                               sys4[MS_AtomIX][2]]))
+                    if (tempVar > tempVar2):
+                        tempVar = tempVar2
+                        closeAtom = MS_AtomIX
+                        #print ("tempVar = {}".format(tempVar))
+                        #print ("closeAtom = {}".format(closeAtom))
+
+                print (closeAtom)
+                pointC = sys4[closeAtom]
+                #print (np.argmin(tempList), pointC, np.min(tempList))
+                distMin = distMin + tempVar
+                print("Dist min: {}".format(distMin))
+                #for FS_AtomIX in range(fixedSystem.n_atoms):
+                #print (centerChain)
+                for atomIx in centerChain:
+                    #print (atomIx)
+                    tempVar2 = np.linalg.norm([pointC[0] - fixedSystem.xyz[0][atomIx][0],
+                                                pointC[2] - fixedSystem.xyz[0][atomIx][2]])
+                    if (tempVar > tempVar2):
+                        closeAtom = atomIx
+
+                pointD = np.linalg.norm(np.array(fixedSystem.xyz[0][closeAtom][0],
+                                                 fixedSystem.xyz[0][closeAtom][2]))
+                print (closeAtom)
+                #print(np.argmin(tempList), pointD, np.min(tempList))
+                #print (np.argmin(tempList)+centerChain[0], pointD, np.min(tempList))
+                #print ("pointD: {}".format(np.linalg.norm(pointD)))
+                distMin = distMin - np.linalg.norm(pointD)
+                print ("Dist min - point d: {}".format(distMin))
+                distMin = distMin - offset
+                print ("DistMin - offset: {}".format(distMin))
+                angle = np.radians(theta * thetaIx)
+                sys4 = sys4 - [distMin*np.cos(angle), 0, distMin*np.sin(angle)]
 
                 # Need to check if the mobile helix collides with any part of
                 # the fixed helices. If yes, discard that conformation. If not,
                 # save it.
                 collision = 0
                 for chainIx in range(fixedSystem.n_chains):
-                    centerChain = fixedSystem.topology.select("chainid {}".format(chainIx))
+
+                    centerChain2 = fixedSystem.topology.select("chainid {}".format(chainIx))
                     #print (centerChain)
                     #print (centerChain[0], centerChain[-1])
                     #for FS_AtomIX in range(fixedSystem.n_atoms):
                     #    for MS_AtomIX in range(mobileSystem.n_atoms):
                     #        distFS_MS = np.linalg.norm(fixedSystem.xyz[0][FS_AtomIX] - sys4[MS_AtomIX])
-                    distFS_MS = np.linalg.norm(centroidPoints(fixedSystem.xyz[0][centerChain[0] + 1:centerChain[-1]]) - centroidPoints(sys4))
+                    distFS_MS = np.linalg.norm(centroidPoints(fixedSystem.xyz[0][centerChain2[0] + 1:centerChain2[-1]]) - centroidPoints(sys4))
                     #print ("{} - {} = {}".format(centroidPoints(fixedSystem.xyz[0]), centroidPoints(sys4), distFS_MS))
                     if (distFS_MS < 0.5):
                     #    pass
