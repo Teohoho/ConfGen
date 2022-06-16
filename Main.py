@@ -13,9 +13,9 @@ def hydrophobicScore(Sys1,Sys2, probe_radius=0.14):
               "T": 1.72, "V": 1.74, "W": 2.85, "Y": 2.63}
     #solvFreeEn as calculated by Kraml et al. 2019 (https://doi.org/10.1021/acs.jctc.9b00742)
     solvFreeEn = {"A": -2.6, "C": -3.4, "D": -45, "E": -40.9, "F": -2.1,
-              "G": -4.2, "H": -8.2, "I": -1.2, "K": -36.5, "L": -1, "M": -3.1,
-              "N": -8.9, "P": -1.9, "Q": -9.1, "R": -32.5, "S": -7.5,
-              "T": -5, "V": -1.8, "W": -3.5, "Y": -4.6}
+                  "G": -4.2, "H": -8.2, "I": -1.2, "K": -36.5, "L": -1, "M": -3.1,
+                  "N": -8.9, "P": -1.9, "Q": -9.1, "R": -32.5, "S": -7.5,
+                  "T": -5, "V": -1.8, "W": -3.5, "Y": -4.6}
 
     fullSystem = Sys1.stack(Sys2)
     sasa = md.shrake_rupley(fullSystem, mode="residue", probe_radius=probe_radius)[0]

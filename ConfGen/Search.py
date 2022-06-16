@@ -1,7 +1,7 @@
 import mdtraj
 import numpy as np
 from scipy.spatial.transform import Rotation as R
-import warnings, sys
+import warnings
 
 def centroidPoints(arr):
     length = arr.shape[0]
