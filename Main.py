@@ -165,9 +165,10 @@ class Main:
                 print("len(tempList): {}".format(len(tempList[-1])))
                 for fixedIx in range(len(tempList[-1])):
                     fixedSys = tempList[-1][fixedIx]
+                    fixedSys.save("/home/teo/2022/ConfGen/tempOut/fixedSys_{}_{}.pdb".format(mobileIx,fixedIx))
                     currentSearch = ConfGen.Search.SearchSurface(fixedSystem=fixedSys,
                                                                  mobileSystem=mobileSys, offset=offset,
-                                                                 theta=30, phi=30, ndelta=0)
+                                                                 theta=90, phi=90, ndelta=0)
         
                     # outputFN = "D:/Munca/2022/ConfGen/newOutput"
                     # ConfGen.TrajWriter.writeTraj(currentSearch, out_FN="{}/fullSearch_{}.dcd".format(outputFN,mobileIx))
@@ -181,17 +182,19 @@ class Main:
                     print(Scores)
                     ## Get top 3 (or N) scores
                     for i in range(rounds):
+                        ix = i + rounds*fixedIx
+                        print (ix)
                         score = np.argsort(Scores)[i]
                         print("Score #{}: {}".format(i, score))
                         tempList2.append(fixedSys.stack(currentSearch[score]))
-                        centerChain = tempList2[i].topology.select("chainid {}".format(tempList2[i].n_chains-1))
-                        print(centerChain)
-                        tempList2[i].save("{}/FixedSys_{}_{}_{}.pdb".format(outputFN, mobileIx, fixedIx, i))
+                        centerChain = tempList2[ix].topology.select("chainid {}".format(tempList2[ix].n_chains-1))
+                        #print(centerChain)
+                        tempList2[ix].save("{}/FixedSys_{}_{}_{}.pdb".format(outputFN, mobileIx, fixedIx, i))
                         print ("File saved successfully: {}/FixedSys_{}_{}_{}.pdb".
                                format(outputFN, mobileIx, fixedIx, i))
-                        tempList2[i].xyz[0] = tempList2[i].xyz[0] - np.average(
-                            tempList2[i].xyz[0][centerChain[0]:centerChain[-1]], axis=0)
-                        tempList2[i].save(
+                        tempList2[ix].xyz[0] = tempList2[ix].xyz[0] - np.average(
+                            tempList2[ix].xyz[0][centerChain[0]:centerChain[-1]], axis=0)
+                        tempList2[ix].save(
                             "{}/FixedSys_Centered_{}_{}_{}.pdb".format(outputFN, mobileIx, fixedIx, i))
                         print("File saved successfully: {}/FixedSys_Centered_{}_{}_{}.pdb".
                               format(outputFN, mobileIx, fixedIx, i))
@@ -201,7 +204,7 @@ class Main:
             else:
                 currentSearch = ConfGen.Search.SearchSurface(fixedSystem=fixedSys,
                                                              mobileSystem=mobileSys, offset=offset,
-                                                             theta=30, phi=30, ndelta=0)
+                                                             theta=90, phi=90, ndelta=0)
                 currentSearch.save("{}/fullSearch_{}.dcd".format(outputFN, mobileIx))
                 Scores = []
                 for FrameIx in range(currentSearch.n_frames):
@@ -212,7 +215,7 @@ class Main:
                     print("Score #{}: {}".format(i, np.argsort(Scores)[i]))
                     tempList2.append(fixedSys.stack(currentSearch[np.argsort(Scores)[i]]))
                     centerChain = tempList2[i].topology.select("chainid {}".format(tempList2[i].n_chains-1))
-                    print (centerChain)
+                    #print (centerChain)
                     tempList2[i].save("{}/FixedSys_{}_{}.pdb".format(outputFN, mobileIx, i))
                     print("File saved successfully: {}/FixedSys_{}_{}.pdb".
                           format(outputFN, mobileIx, i))
